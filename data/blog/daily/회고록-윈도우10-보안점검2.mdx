@@ -1,0 +1,483 @@
+---
+title: 회고록-윈도우10-보안점검2
+date: '2025-03-26'
+tags: ['security', 'window-defender']
+draft: false
+---
+
+# 배경
+
+- 이전 보안점검 후에도 윈도우 디펜더의 설정이 계속 변경되는 문제가 있었습니다.
+- 전문가의 도움을 받기 위해서, Microsoft Community에 도움 요청 글을 게시하였습니다.
+  - [게시글](https://answers.microsoft.com/en-us/windows/forum/all/how-can-prevent-svchostexe-and-wscriptexe-to-be/6565fe86-de8c-465f-8ab2-bcebcf3d7370?page=1)
+- 이번 시간에는 도움 요청 글을 기반으로 문제 해결을 정리하는 시간을 갖겠습니다.
+
+# 관련 지식
+
+## ESET online scanner
+
+- 윈도우 시스템에서 실행가능한 웹 기반 동작 무료 악성 코드 검사 도구입니다.
+- 체코 보안업체 ESET에서 제공합니다.
+- 기존 백신이 감지하지 못한 악성코드를 찾고 싶을때, 우용한 보조 검사 도구 입니다.
+
+### 주요 기능
+
+1. 1회성 검사 도구
+
+- 실시간 보호 기능은 없지만 감염된 파일을 제거하는 검사 기능은 제공합니다.
+
+2. 클라우드 기반 최신 데이터 베이스 활용
+
+- 최신 악성코드 정의 파일을 사용하여 시스템을 검사합니다.
+
+3. 루트킷 및 정교한 위협 감지
+
+- 고급 탐지 기술을 사용하여 숨어있는 악성코드를 탐지합니다.
+
+4. 자동 클린업
+
+- 실행 후 수동으로 제거하거나 시스템에서 자동 삭제됩니다.
+
+## Farbar Recovery Scan Tool(FRST)
+
+- 윈도우 시스템의 심층적인 분석 및 문제 해결을 위한 진단 도구입니다.
+- 백신 프로그램이 감지하지 못하는 악성코드, 루트킷, 시스템 손상 여부를 확인하는데 유용합니다.
+- Q. 누가만듬? 누가 공급함?
+
+### 주요 기능
+
+1. 시스템 스캔 및 진단.
+
+- Windows 레지스트리, 드라이버, 서비스, 실행 중인 프로세스, 네트워크 설정 등을 검사합니다.
+- 부팅시 실행되는 프로그램과 관련된 정보를 확인할 수 있습니다.
+
+2. 악성코드 및 루트킷 탐지
+
+- 일반적인 바이러스 백신이 감지하지 못하는 심층적인 시스템 변조를 분석합니다.
+- 숨겨진 악성코드, 의심스러운 프로세스, 불필요한 시작 프로그램 등을 탐지
+
+3. 자동 복구 및 수동 수정 지원
+
+- FRST를 사용해 감염된 시스템을 복구하거나, 사용자 지정 스크립트를 실행해 문제해결이 가능합니다.
+- Windows 부팅이 불가능할 때, 복구 모드에서 실행 가능합니다.
+
+4. 백업 및 로그 파일 생성
+
+- 시스템 검사를 통해 텍스트 로그 파일을 생성하여 문제를 분석합니다.
+- 보안 전문가가 로그를 분석하여 적절한 조치를 취할 수 있습니다.
+
+5. Windows 복구 환경(WinRE) 지원
+
+- Windows가 정상적으로 부팅되지 않을 때, 안전 모드 또는 복구 환경에서 실행 가능합니다.
+- FRST64.exe를 USB에 넣고 부팅하여 사용할 수 있습니다.
+
+### 주의 사항
+
+- FRST는 강력한 도구이지만, 잘못된 설정 변경은 시스템을 손상시킬 수 있으므로 주의가 필요합니다.
+- `Fixlist.txt` 스크립트를 실행하는 경우, 전문가의 조언 없이 무작위로 실행하면 안됩니다.
+  - `Fixlist.txt` 스크립트는 스캔 동작의 결과 로그파일을 기반으로 문제를 해결하기 위한 스크립트입니다.
+  - 스크립트에는 시스템을 변경시키는 명령어가 있으므로, 주의해서 사용해야합니다.
+
+## Rootkit
+
+- 루트킷은 OS 혹은 SW를 은밀히 조작하여 악성 해위를 숨기는 악성 코드입니다.
+- 해커가 시스템을 장악한 뒤, 자신의 존재를 감추고, 지속적인 접근을 간으하게 하는 도구입니다.
+- 특징
+  - 커널 레벨에서 동작하여 탐지가 어렵습니다.
+  - 공격자가 원격에서 시스템을 제어할 수 있는 백도어 역할을 합니다.
+  - 보안 소프트웨어를 비활성화하거나 우회합니다.
+- 종류
+
+  1. 유저 모드 루트킷
+
+  - 일반 응용 프로그램 수준에서 동작합니다
+  - 탐지가 비교적 쉽습니다.
+
+  2. 커널 모드 루트킷
+
+  - 운영체제 커널을 변조하여 동작합니다.
+  - 탐지가 비교적 어렵습니다.
+
+  3. 펌웨어 루트킷
+
+  - 하드웨어 펌웨어에 숨어 있습니다.
+  - 최악의 경우 보안 소프트 웨어로도 제거 불가합니다.
+
+- 루트킷 탐지 방법
+  1. 포렌식 기법 사용
+  - 메모리 덤프 분석
+  - 커널 구조 검사
+  2. 부트 시점 검사
+  - 정상적인 운영체제 외부에서 검사
+  - 루트킷 전용 탐지 도구 사용
+    - GMER,chkrootkit,rkhunter 등
+- 루트킷 제거 방법
+  - 감염이 심하면 운영체제 재설치가 필요할 수 있습니다.
+  - 일부 루트킷은 부팅하기전에 보안 부팅 디스크를 이용하여 제거 가능합니다.
+
+## Clean boot
+
+- 윈도우 시스템을 최소한의 드라이버와 시작 프로그램으로 실행하는 방식입니다.
+- 불필요한 서비스와 프로그램을 실행하지 않으므로 시스템 충돌 문제를 진단하고 해결하는데 유용합니다.
+- 문제를 유발하는 서비스 또는 시작 프로그램을 찾아낼때 사용됩니다.
+- 참조
+  - [윈도우 공식 문서](https://support.microsoft.com/en-us/topic/how-to-perform-a-clean-boot-in-windows-da2f9573-6eec-00ad-2f8a-a97a1807f3dd)
+
+## Process Monitor
+
+- 윈도우 시스템에서 실시간으로 프로세스, 파일, 레지스트리 네트워크 활동을 모니터링하는 도구입니다.
+- 프로그램 실행 문제 발생시 원인분석하는데 사용됩니다.
+  - 확인할 수 있는 오류 종류는 DLL 로딩 문제, 권한 부족, 파일/레지스트리 접근 오류 등 입니다.
+- 악성코드를 분석하는데 사용됩니다.
+  - 의심스러운 프로세스가 어떤 파일, 레지스트리, 네트워크 연결을 사용하는지 확인합니다.
+- 성능 및 보안 분석에 사용됩니다.
+  - 특정 어플리케이션이 불필요한 파일 또는 레지스트리 접근을 반복하는지 확인합니다.
+- 너무 많은 이벤트를 수집하면 시스템 성능이 저하될 수 있으므로, 적절한 필터링이 필요합니다.
+
+### 주요 기능
+
+1. 프로세스 모니터링
+
+- 실행 중인 모든 프로세스의 생성, 죵로, 속성 변경 등을 추적합니다.
+- 부모-자식 프로세스 관계를 확인할 수 있습니다.
+
+2. 파일 시스템 모니터링
+
+- 특정 프로세스가 어떤 파일을 읽고/쓰고/삭제하는지 추적합니다.
+- 파일 접근 구너한 오류 분석이 가능합니다.
+
+3. 레지스트리 모니터링
+
+- 프로세스가 어떤 레지스트리 키를 읽고/변경/삭제하는지 확인합니다.
+- 특정 설정 변경이 시스템에 미치는 영향을 분석합니다.
+
+4. 네트워크 모니터링
+
+- 프로세스가 생성하는 네트워크 연결을 추적합니다.
+- 특정 어플리케이션이 외부 서버와 통신하는지 확인합니다.
+
+5. 필터링 로그를 기록
+
+- 특정 프로세스, 경로, 레지스트리 키, 네트워크 활동만 필터링하여 분석합니다.
+- 캡처된 에벤트를 저장하여 나중에 분석가능합니다.
+
+# 본론
+
+## 상황
+
+- 부팅 후, "svchost.exe" 프로세스가 윈도우 디펜더의 검사 대상에서 제외되는 문제가 계속 발생했습니다.
+- 컴퓨터 사용시, 반복적으로 "wscript.exe" 프로세스가 윈도우 디펜더의 검사 대상에서 제외되는 문제가 계속 발생했습니다.
+- 윈도우 정책을 통해 특정 프로세스 또는 파일이 윈도우 디펜더의 검사 대상에서 제외되지 않도록 설정했지만, 위 문제가 발생하였습니다.
+- Microsoft Community에 도움 요청을 남기고, 조언을 구했습니다.
+
+## 대처
+
+### 문제 분석 및 공유
+
+- ESET를 실행하여 컴퓨터를 점검한 뒤, 결과 파일을 공유하였습니다.
+- Fabar 스캔 동작을 통해 컴퓨터를 분석 한뒤, 결과 파일을 공유하였습니다.
+
+### 불필요한 설정 제거
+
+- Fabar의 Fix 동작을 통해 컴퓨터를 다시 설정한 뒤, 동작 로그를 공유하였습니다.
+- 시스템 최적화, 보안 강화, 불필요한 프로그램 제거를 목적으로 동작하였습니다.
+- 간략하게 분석하면 다음과 같습니다.
+  1. 시스템 복원 및 프로세스 종료
+     `CloseProcess:`
+     - 현재 실행중인 모든 프로세스를 강제 종료
+       `SystemRestore: On`
+     - 시스템 복원을 활성화
+       `CreateRestorePoint:`
+     - 현재 시스템 상태의 복원지점을 생성
+     - 수정후 문제가 생길 경우 롤백하기 위함입니다.
+  2. 특정 파일 및 레지스트리 키 조작
+     `File: C:\Program Files (x86)\MarkAny\WebDRMNoAX\bin\MaWebDRMSVC.exe`
+     - 특정 파일을 처리
+       `ExportKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Exclusions`
+       `ExportKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Threats`
+     - Windows Defender 관련 레지스트리 키를 내보내 백업
+       `DeleteKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Exclusions`
+       `DeleteKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Threats`
+     - 이전에 백업한 레지스트리 키를 삭제
+     - window defender의 예외 목록과 위협 정보를 초기화합니다.
+  3. 불필요한 시작 프로그램 제거
+     `HKLM\...\Run` 및 `HKLM-x32\...\Run` 항목들
+     - Wondershare, Wizvera Veraprot/Delfino 등 자동 실행 프로그램 비활성화
+     - `"No File"`이 있는 경우, 해당 프로그램은 이미 삭제되었지만, 레지스트리 항목이 남아 있는 상태입니다.
+       `ExportKey: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender`
+     - windows Defender 정책 관련 키 백업
+       `HKLM\SOFTWARE\Policies\Microsoft\Windows Defender: Restriction <==== ATTENTION`
+     - Windows Defender가 비활성화된 상태
+  4. 불필요한 작업 스케케줄러 제거
+     `Task: {FA379ED8-D1EC-4010-9A7E-9C93627ED150} - System32\Tasks\OneDrive Reporting Task`
+     - OneDrive 관련 자동 업데이트 작업 제거
+       `Task: {01BFE0D0-6D7A-4E98-BA34-F37FF18A024F} - System32\Tasks\OneDrive Standalone Update Task`
+     - OneDrive 업데이트 작업 삭제
+       `Task: {D5F0EC7F-2A70-4632-83E4-53FD6FF019E4} - System32\Tasks\Sump Task (One-Time)`
+     - IObit Advanced SystemCare 관련 스케줄러 제거
+  5. 드라이버 및 서비스 관련 문제 수정
+     `R3 cpuz158; C:\Windows\temp\cpuz158\cpuz158_x64.sys [44592 2025-03-24]`
+     - CPU-Z 드라이버 제거 필요
+       `S3 amdkmdag; \SystemRoot\System32\DriverStore\FileRepository\u0367912.inf_amd64_1567db284dfba458\B366469\amdkmdag.sys [X]`
+     - AMD 그래픽 드라이버가 손상되었거나 제거된 상태
+       `S2 AMDRyzenMasterDriverV17; \??\C:\Program Files\AMD\CNext\CNext\AMDRyzenMasterDriver.sys [X]`
+     - AMD Ryzen Master 드라이버가 존재하지 않음
+       `S3 AscFileFilter; \??\C:\Program Files (x86)\IObit\Advanced SystemCare\drivers\win10_amd64\AscFileFilter.sys [X]`
+     - IObit Advanced SystemCare 관련 드라이버가 손상됨
+  6. 불필요한 컨텍스트 메뉴 제거
+     `ContextMenuHandlers5: [ACE] -> {5E2121EE-0300-11D4-8D3B-444553540000} => -> No File`
+     - Windows 탐색기에서 마우스 우클릭 메뉴와 관련된 항목 제거
+  7. 보안 위협 가능성 내재된 Alternate Data Streams 정리
+     `AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Chrome.lnk:DDAA7C7949 [3442]`
+     - 프로그램 바로가기 파일에 숨겨진 데이터 스트림 존재
+     - 이와 같은 ADS는 악성코드가 은닉하는데 사용될 가능성이 있으므로 삭제합니다.
+  8. 방화벽 규칙 수정
+     `FirewallRules: [{AF7B7C5A-77BD-49F0-8E32-CDE1B2FDF38E}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe => No File`
+     - Davinci Resolve 관련 방화벽 규칙 제거
+       `FirewallRules: [{A2DC4A84-B68E-4176-8B36-6D59300C68A9}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\EuphonixPanelDaemon.exe => No File`
+     - 삭제된 프로그램의 방화벽 예외 규칙 삭제
+
+```txt
+CloseProcesses:
+SystemRestore: On
+CreateRestorePoint:
+File: C:\Program Files (x86)\MarkAny\WebDRMNoAX\bin\MaWebDRMSVC.exe
+ExportKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Exclusions
+ExportKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Threats
+DeleteKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Exclusions
+DeleteKey: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Threats
+HKLM\...\Run: [Wondershare Helper Compact.exe] => C:\Program Files\Common Files\Wondershare\Wondershare Helper Compact\WSHelper.exe (No File)
+HKLM\...\Run: [wizvera-veraport-x64] => "C:\Program Files\Wizvera\Veraport20\veraport-x64.exe" wizvera-veraport://exec/x86/16105/ (No File)
+HKLM-x32\...\Run: [wizvera-delfino-pc] => "C:\Program Files (x86)\Wizvera\Delfino-G3\delfino.exe" wizvera-delfino-pc://exec/x86/16107/ (No File)
+HKLM-x32\...\Run: [wizvera-veraport] => "C:\Program Files (x86)\Wizvera\Veraport20\veraport.exe" wizvera-veraport://exec/x86/16105/ (No File)
+ExportKey: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender
+HKLM\SOFTWARE\Policies\Microsoft\Windows Defender: Restriction <==== ATTENTION
+HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate: Restriction <==== ATTENTION
+HKLM\SOFTWARE\Policies\Microsoft\Windows Defender Security Center: Restriction <==== ATTENTION
+HKU\S-1-5-21-2252321075-778781264-973281766-1001\...\Run: [RiotClient] => C:\Riot Games\Riot Client\RiotClientServices.exe --launch-background-mode (No File)
+GroupPolicy: Restriction - Windows Defender <==== ATTENTION
+Policies: C:\ProgramData\NTUSER.pol: Restriction <==== ATTENTION
+Task: {FA379ED8-D1EC-4010-9A7E-9C93627ED150} - System32\Tasks\OneDrive Reporting Task-S-1-5-21-2252321075-778781264-973281766-1001 => %localappdata%\Microsoft\OneDrive\OneDriveStandaloneUpdater.exe  /reporting (No File) <==== ATTENTION
+Task: {01BFE0D0-6D7A-4E98-BA34-F37FF18A024F} - System32\Tasks\OneDrive Standalone Update Task-S-1-5-21-2252321075-778781264-973281766-1001 => %localappdata%\Microsoft\OneDrive\OneDriveStandaloneUpdater.exe  (No File) <==== ATTENTION
+Task: {009C3778-550F-4534-B63B-BCD4B73C8298} - System32\Tasks\OneDrive Standalone Update Task-S-1-5-21-2252321075-778781264-973281766-500 => %localappdata%\Microsoft\OneDrive\OneDriveStandaloneUpdater.exe  (No File) <==== ATTENTION
+Task: {D5F0EC7F-2A70-4632-83E4-53FD6FF019E4} - System32\Tasks\Sump Task (One-Time) => "C:\Program Files (x86)\IObit\Advanced SystemCare\sump.exe"  -> C:\Program Files (x86)\IObit\Advanced SystemCare\\/sup2
+R3 cpuz158; C:\Windows\temp\cpuz158\cpuz158_x64.sys [44592 2025-03-24] (Microsoft Windows Hardware Compatibility Publisher -> CPUID) <==== ATTENTION
+S3 amdkmdag; \SystemRoot\System32\DriverStore\FileRepository\u0367912.inf_amd64_1567db284dfba458\B366469\amdkmdag.sys [X]
+S2 AMDRyzenMasterDriverV17; \??\C:\Program Files\AMD\CNext\CNext\AMDRyzenMasterDriver.sys [X]
+S3 AscFileFilter; \??\C:\Program Files (x86)\IObit\Advanced SystemCare\drivers\win10_amd64\AscFileFilter.sys [X]
+S3 AscRegistryFilter; \??\C:\Program Files (x86)\IObit\Advanced SystemCare\drivers\win10_amd64\AscRegistryFilter.sys [X]
+S3 cpuz145; \??\C:\Windows\temp\cpuz145\cpuz145_x64.sys [X] <==== ATTENTION
+U4 npcap_wifi; no ImagePath
+S3 WinRing0_1_2_0; \??\C:\Users\samsam\AppData\Local\Temp\tmpF13C.tmp [X] <==== ATTENTION
+ContextMenuHandlers5: [ACE] -> {5E2121EE-0300-11D4-8D3B-444553540000} =>  -> No File
+AlternateDataStreams: C:\ProgramData\DP45977C.lfl:677104FCAA [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\desktop.ini:B1DA6C571C [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\카카오톡.lnk:B3C6B27B3E [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\4K Video Downloader.lnk:CCF539F03F [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Access.lnk:A1B76439FE [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Chrome.lnk:DDAA7C7949 [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Excel.lnk:B96E9B8455 [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\OneNote.lnk:60EC9648C0 [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Outlook (classic).lnk:BE800952D3 [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\PC Health Check.lnk:F20EF51E1F [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\PowerPoint.lnk:1DC1525F34 [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Publisher.lnk:104946E0EA [3442]
+AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Sticky Notes (new).lnk:3DF0A9C0EF [3442]
+AlternateDataStreams: C:\Users\samsam\Application Data:5a7a7919109c97d615ad7581cd492710 [394]
+AlternateDataStreams: C:\Users\samsam\Downloads\esetonlinescanner.exe:MBAM.Zone.Identifier [243]
+AlternateDataStreams: C:\Users\samsam\Downloads\FRST64 (1).exe:MBAM.Zone.Identifier [97]
+AlternateDataStreams: C:\Users\samsam\Downloads\FRST64English.exe.exe:MBAM.Zone.Identifier [97]
+AlternateDataStreams: C:\Users\samsam\AppData\Roaming:5a7a7919109c97d615ad7581cd492710 [394]
+AlternateDataStreams: C:\Users\samsam\AppData\Local\Temp:{5D825C30-D120-4800-9AB1-618D1CB50EE9} [0]
+AlternateDataStreams: C:\Users\samsam\AppData\Local\Temp:{67AD6FA5-2A7D-47de-A0C4-F04C8F26F841} [0]
+HKU\S-1-5-21-2252321075-778781264-973281766-1001\Software\Classes\regfile:  <==== ATTENTION
+HKU\S-1-5-21-2252321075-778781264-973281766-1001\Software\Classes\.reg:  =>  <==== ATTENTION
+HKU\S-1-5-21-2252321075-778781264-973281766-1001\Software\Classes\.bat:  =>  <==== ATTENTION
+HKU\S-1-5-21-2252321075-778781264-973281766-1001\Software\Classes\.cmd:  =>  <==== ATTENTION
+FirewallRules: [{AF7B7C5A-77BD-49F0-8E32-CDE1B2FDF38E}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe => No File
+FirewallRules: [{275B28AF-7336-49A8-9FFD-C3B26B85A15D}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\bmdpaneld.exe => No File
+FirewallRules: [{EF4ECAB0-8275-4B8F-B759-C8A3EC7E5F5A}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\DaVinciPanelDaemon.exe => No File
+FirewallRules: [{858D2122-8EB6-45F4-B065-F3DC04AB5BBB}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\JLCooperPanelDaemon.exe => No File
+FirewallRules: [{A2DC4A84-B68E-4176-8B36-6D59300C68A9}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\EuphonixPanelDaemon.exe => No File
+FirewallRules: [{B9D7FB77-4DD8-457B-BDCA-E8167F66662F}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\TangentPanelDaemon.exe => No File
+FirewallRules: [{125EC715-A25B-4C5B-BC6D-751A73577E1D}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\fuscript.exe => No File
+FirewallRules: [{A5EFB1E6-A998-4BDF-80B8-4B8859B0C4E2}] => (Allow) C:\Program Files\Blackmagic Design\DaVinci Resolve\DPDecoder.exe => No File
+FirewallRules: [{FD4E22BF-67E3-4F60-B63F-D3331FBAF08F}] => (Allow) C:\Program Files (x86)\Steam\Steam.exe => No File
+FirewallRules: [{C5569B22-F961-46A5-B8D6-7E5512EF94F4}] => (Allow) C:\Program Files (x86)\Steam\Steam.exe => No File
+FirewallRules: [{2C67603C-8D95-4C03-A773-41545D9C5F6A}] => (Allow) C:\Program Files (x86)\Steam\bin\cef\cef.win7x64\steamwebhelper.exe => No File
+FirewallRules: [{74543673-E266-4DD1-9132-3AC63198A087}] => (Allow) C:\Program Files (x86)\Steam\bin\cef\cef.win7x64\steamwebhelper.exe => No File
+FirewallRules: [{74F3F740-4CAF-4769-B2C4-27E4F3C7DC30}] => (Allow) C:\Program Files (x86)\Steam\steamapps\common\Frostpunk\Frostpunk.exe => No File
+FirewallRules: [{28B356B8-8E6C-4BC7-B62A-6BC8B25FE9FD}] => (Allow) C:\Program Files (x86)\Steam\steamapps\common\Frostpunk\Frostpunk.exe => No File
+FirewallRules: [TCP Query User{5163B686-3716-4614-8EA4-E4C26354FF74}C:\riot games\riot client\riotclientservices.exe] => (Allow) C:\riot games\riot client\riotclientservices.exe => No File
+FirewallRules: [UDP Query User{7754BF5B-E16A-480D-BA43-1DDCE599F88F}C:\riot games\riot client\riotclientservices.exe] => (Allow) C:\riot games\riot client\riotclientservices.exe => No File
+FirewallRules: [{E877E5E3-4F89-4674-AA82-A45AA0C4019F}] => (Allow) C:\Program Files (x86)\Steam\steamapps\common\Sid Meier's Civilization VI\2KLauncher\LauncherPatcher.exe => No File
+FirewallRules: [{0D60B666-38F9-4A06-BB7F-8071CF58608D}] => (Allow) C:\Program Files (x86)\Steam\steamapps\common\Sid Meier's Civilization VI\2KLauncher\LauncherPatcher.exe => No File
+FirewallRules: [{C3FF4936-E468-4212-981D-964C2BE76A1C}] => (Allow) C:\Users\samsam\AppData\Roaming\Zoom\bin\Zoom.exe => No File
+FirewallRules: [{C20003F4-2D49-405A-A020-A494542B0B15}] => (Allow) C:\Users\samsam\AppData\Roaming\Zoom\bin\airhost.exe => No File
+FirewallRules: [{D53D2A30-826E-484D-9828-352FF140D007}] => (Allow) C:\Users\samsam\AppData\Roaming\Zoom\bin\airhost.exe => No File
+FirewallRules: [TCP Query User{E2436092-F5F5-40F2-9554-F2C73F9A0938}C:\program files (x86)\steam\steamapps\common\sid meier's civilization vi\base\binaries\win64steam\civilizationvi.exe] => (Block) C:\program files (x86)\steam\steamapps\common\sid meier's civilization vi\base\binaries\win64steam\civilizationvi.exe => No File
+FirewallRules: [UDP Query User{4C679A57-2C6F-48C8-AD01-CFA91B53FFBA}C:\program files (x86)\steam\steamapps\common\sid meier's civilization vi\base\binaries\win64steam\civilizationvi.exe] => (Block) C:\program files (x86)\steam\steamapps\common\sid meier's civilization vi\base\binaries\win64steam\civilizationvi.exe => No File
+FirewallRules: [TCP Query User{1FB14C29-7A3F-4E32-8EFF-00BEC009D02D}C:\program files\wondershare\wondershare democreator (korean)\democreator.exe] => (Allow) C:\program files\wondershare\wondershare democreator (korean)\democreator.exe => No File
+FirewallRules: [UDP Query User{AEB73010-5164-41BC-8EFC-15A3B25080DF}C:\program files\wondershare\wondershare democreator (korean)\democreator.exe] => (Allow) C:\program files\wondershare\wondershare democreator (korean)\democreator.exe => No File
+FirewallRules: [TCP Query User{87A5DC08-7379-4E39-AAA6-06AB70B82394}C:\users\samsam\appdata\local\temp\xamarin\xma\local\broker\87676d72\broker.exe] => (Block) C:\users\samsam\appdata\local\temp\xamarin\xma\local\broker\87676d72\broker.exe => No File
+FirewallRules: [UDP Query User{20B54563-701A-4A9A-B049-91937B2A8839}C:\users\samsam\appdata\local\temp\xamarin\xma\local\broker\87676d72\broker.exe] => (Block) C:\users\samsam\appdata\local\temp\xamarin\xma\local\broker\87676d72\broker.exe => No File
+FirewallRules: [TCP Query User{63D6A976-C631-4C3A-B259-A020731CA895}C:\users\samsam\desktop\warcraft iii\warcraft iii\warcraft iii\war3.exe] => (Allow) C:\users\samsam\desktop\warcraft iii\warcraft iii\warcraft iii\war3.exe => No File
+FirewallRules: [UDP Query User{D3575DED-868B-40ED-A01F-A20CD2E5FAC2}C:\users\samsam\desktop\warcraft iii\warcraft iii\warcraft iii\war3.exe] => (Allow) C:\users\samsam\desktop\warcraft iii\warcraft iii\warcraft iii\war3.exe => No File
+FirewallRules: [TCP Query User{5EB8A98D-EBD8-4EB4-B13C-E8E635A1D4B3}C:\users\samsam\desktop\1.28(3)\war3.exe] => (Allow) C:\users\samsam\desktop\1.28(3)\war3.exe => No File
+FirewallRules: [UDP Query User{E19C7F8B-BF06-43F5-881B-C42E980A7C2A}C:\users\samsam\desktop\1.28(3)\war3.exe] => (Allow) C:\users\samsam\desktop\1.28(3)\war3.exe => No File
+FirewallRules: [TCP Query User{87BB48EB-9AB8-4BC0-84CE-A1CB74A38A00}C:\users\samsam\desktop\warcraft iii\warcraft iii.exe] => (Allow) C:\users\samsam\desktop\warcraft iii\warcraft iii.exe => No File
+FirewallRules: [UDP Query User{E9DF18F5-4BE7-4A2D-9F0A-7D34CEE5E73B}C:\users\samsam\desktop\warcraft iii\warcraft iii.exe] => (Allow) C:\users\samsam\desktop\warcraft iii\warcraft iii.exe => No File
+FirewallRules: [TCP Query User{3AD690AB-A1C0-4F67-83F3-13B2CE437E9E}C:\users\samsam\desktop\warcraft iii\war3.exe] => (Allow) C:\users\samsam\desktop\warcraft iii\war3.exe => No File
+FirewallRules: [UDP Query User{86CDDBBA-A020-4595-B9EE-A4DB90207527}C:\users\samsam\desktop\warcraft iii\war3.exe] => (Allow) C:\users\samsam\desktop\warcraft iii\war3.exe => No File
+FirewallRules: [TCP Query User{E1047B61-F71F-4D02-8397-A5FA9B70EFF1}C:\users\samsam\appdata\local\discord\app-1.0.9004\discord.exe] => (Allow) C:\users\samsam\appdata\local\discord\app-1.0.9004\discord.exe => No File
+FirewallRules: [UDP Query User{FC883F75-53AF-43CB-B4E0-81BB8FB86A63}C:\users\samsam\appdata\local\discord\app-1.0.9004\discord.exe] => (Allow) C:\users\samsam\appdata\local\discord\app-1.0.9004\discord.exe => No File
+FirewallRules: [{5324862B-6F68-4402-AF70-E29252EF3510}] => (Allow) C:\Program Files (x86)\LG Way Fit Test\LG Way Fit Test.exe => No File
+FirewallRules: [TCP Query User{DEB731BC-4E5C-45F4-9D01-5868FFD571AE}C:\temp\war\warcraft iii\warcraft iii.exe] => (Allow) C:\temp\war\warcraft iii\warcraft iii.exe => No File
+FirewallRules: [UDP Query User{3EE1CBC5-7217-4A1F-8CF4-AD79FE5E7F20}C:\temp\war\warcraft iii\warcraft iii.exe] => (Allow) C:\temp\war\warcraft iii\warcraft iii.exe => No File
+FirewallRules: [TCP Query User{D46F828E-72AF-433A-B609-CA8C84999F3E}C:\temp\war\warcraft iii\war3.exe] => (Allow) C:\temp\war\warcraft iii\war3.exe => No File
+FirewallRules: [UDP Query User{69A1FFBD-D105-4CBC-993A-FEE1ECB18EE6}C:\temp\war\warcraft iii\war3.exe] => (Allow) C:\temp\war\warcraft iii\war3.exe => No File
+FirewallRules: [{C4755EA5-7559-4283-BBCB-D89F97783B93}] => (Allow) C:\Users\samsam\Downloads\4ukey.exe => No File
+FirewallRules: [{9372998E-83D0-45F9-A7DC-0D0C047FFD0C}] => (Allow) C:\Users\samsam\Downloads\4ukey.exe => No File
+FirewallRules: [{367BCDF3-DD19-4733-86AB-7FF24130F3B2}] => (Allow) C:\Users\samsam\Downloads\iphone-unlock (1).exe => No File
+FirewallRules: [{18761716-3DFF-45CE-841B-B6EE67A2E870}] => (Allow) C:\Users\samsam\Downloads\iphone-unlock (1).exe => No File
+FirewallRules: [TCP Query User{5116EA8A-C7D0-402E-8DF4-D2B002F5D306}C:\program files (x86)\passfab\passfab iphone unlock\mdns\mdnsresponder.exe] => (Allow) C:\program files (x86)\passfab\passfab iphone unlock\mdns\mdnsresponder.exe => No File
+FirewallRules: [UDP Query User{0CC3058A-ED3E-4FB9-B18A-4DCD80952DC2}C:\program files (x86)\passfab\passfab iphone unlock\mdns\mdnsresponder.exe] => (Allow) C:\program files (x86)\passfab\passfab iphone unlock\mdns\mdnsresponder.exe => No File
+FirewallRules: [{8161EAB5-F7EB-4B91-911B-956A621DD6A4}] => (Allow) C:\Program Files (x86)\UnlockGo\UnlockGo.exe => No File
+FirewallRules: [{4CCDC793-6A3C-40CC-A09F-C5120C62B917}] => (Allow) C:\Program Files (x86)\UnlockGo\UnlockGo.exe => No File
+FirewallRules: [{2910E3D2-736D-4CE6-8C14-5276A60A430D}] => (Allow) C:\Users\samsam\Downloads\activation-unlock.exe => No File
+FirewallRules: [{0A243684-252F-4344-A972-D34407939D61}] => (Allow) C:\Users\samsam\Downloads\activation-unlock.exe => No File
+FirewallRules: [{3284CD25-8A5E-4C5D-B88C-72FBD6351C7F}] => (Allow) C:\Program Files (x86)\Smilegate\STOVE\STOVE.exe => No File
+FirewallRules: [{CCE62B77-215A-4697-A699-D609610A01AD}] => (Allow) C:\Program Files (x86)\Smilegate\STOVE\STOVE.exe => No File
+FirewallRules: [{E8E802C7-FFE7-4B94-83B8-105AA7757653}] => (Allow) C:\Program Files (x86)\Smilegate\STOVE\sgup_auto.exe => No File
+FirewallRules: [{E04EFBB6-6A7C-418C-844B-56E009C5C13C}] => (Allow) C:\Program Files (x86)\Smilegate\STOVE\sgup_auto.exe => No File
+FirewallRules: [TCP Query User{07E48267-64A6-4472-B02F-30ECA43AF7B8}C:\riot games\riot client\riotclientelectron\riot client.exe] => (Allow) C:\riot games\riot client\riotclientelectron\riot client.exe => No File
+FirewallRules: [UDP Query User{F5CD165E-23DF-4415-976A-29306F3709D7}C:\riot games\riot client\riotclientelectron\riot client.exe] => (Allow) C:\riot games\riot client\riotclientelectron\riot client.exe => No File
+FirewallRules: [TCP Query User{C5ED6D46-A390-4D1B-A067-A9A7FF9FDC32}C:\users\samsam\desktop\1.28\war3.exe] => (Allow) C:\users\samsam\desktop\1.28\war3.exe => No File
+FirewallRules: [UDP Query User{EBEE74CD-8D1C-46DA-A8E5-363C61491C09}C:\users\samsam\desktop\1.28\war3.exe] => (Allow) C:\users\samsam\desktop\1.28\war3.exe => No File
+FirewallRules: [TCP Query User{43CDA27D-41E6-4E0E-91F6-18EEE2524BF0}C:\users\samsam\appdata\local\packages\canonicalgrouplimited.ubuntu_79rhkp1fndgsc\localstate\rootfs\usr\local\aws-cli\v2\2.23.1\dist\aws] => (Allow) C:\users\samsam\appdata\local\packages\canonicalgrouplimited.ubuntu_79rhkp1fndgsc\localstate\rootfs\usr\local\aws-cli\v2\2.23.1\dist\aws => No File
+FirewallRules: [UDP Query User{ACBC4C64-A5DC-4594-9825-7569BE49C059}C:\users\samsam\appdata\local\packages\canonicalgrouplimited.ubuntu_79rhkp1fndgsc\localstate\rootfs\usr\local\aws-cli\v2\2.23.1\dist\aws] => (Allow) C:\users\samsam\appdata\local\packages\canonicalgrouplimited.ubuntu_79rhkp1fndgsc\localstate\rootfs\usr\local\aws-cli\v2\2.23.1\dist\aws => No File
+FirewallRules: [{82CE22CF-250C-4650-B75C-E25C157DE4BE}] => (Block) C:\users\samsam\appdata\local\packages\canonicalgrouplimited.ubuntu_79rhkp1fndgsc\localstate\rootfs\usr\local\aws-cli\v2\2.23.1\dist\aws => No File
+FirewallRules: [{FE5860FD-9FEC-472D-A3A8-E85E0F38ED01}] => (Block) C:\users\samsam\appdata\local\packages\canonicalgrouplimited.ubuntu_79rhkp1fndgsc\localstate\rootfs\usr\local\aws-cli\v2\2.23.1\dist\aws => No File
+FirewallRules: [TCP Query User{F185B7D1-BBAA-41C0-93BA-B0993742FCAA}C:\users\samsam\desktop\1.28 (1)\war3.exe] => (Allow) C:\users\samsam\desktop\1.28 (1)\war3.exe => No File
+FirewallRules: [UDP Query User{7E38F288-41F2-4B47-B141-48A12A932719}C:\users\samsam\desktop\1.28 (1)\war3.exe] => (Allow) C:\users\samsam\desktop\1.28 (1)\war3.exe => No File
+FirewallRules: [{1DF38B11-94AE-4C5E-8CAE-792C16DAACB3}] => (Block) C:\users\samsam\desktop\1.28 (1)\war3.exe => No File
+FirewallRules: [{5A146EEF-3023-4F72-AC78-010BAD1E9FFF}] => (Block) C:\users\samsam\desktop\1.28 (1)\war3.exe => No File
+StartPowerShell:
+Get-MpPreference | select Exclusion*, ThreatID*
+$Paths=(Get-MpPreference).ExclusionPath
+foreach ($Path in $Paths) { Remove-MpPreference -ExclusionPath $Path -Verbose}
+$Extensions=(Get-MpPreference).ExclusionExtension
+foreach ($Extension in $Extensions) { Remove-MpPreference -ExclusionExtension $Extension -Verbose}
+$Processes=(Get-MpPreference).ExclusionProcess
+foreach ($Process in $Processes) { Remove-MpPreference -ExclusionProcess $Process -Verbose}
+$ThreatIds = (Get-MpPreference).ThreatIDDefaultAction_Ids
+Foreach ($ThreatId in $ThreatIds) { Remove-MpPreference -ThreatIDDefaultAction_Ids $ThreatId -Verbose }
+& "C:\Program Files\Windows Defender\MpCmdRun.exe" -SignatureUpdate -MMPC
+Get-MpPreference
+Get-MpComputerStatus
+netsh advfirewall show allprofiles state
+sc.exe query Sense
+EndPowerShell:
+ExportKey: HKLM\SOFTWARE\Policies\Microsoft\Windows Advanced Threat Protection
+ExportKey: HKLM\SOFTWARE\Microsoft\Windows Advanced Threat Protection
+EmptyTemp:
+```
+
+### 원인 유발 서비스 또는 프로그램 디버깅
+
+- clean boot 환경에서 무엇이 문제를 발생시키는지 디버깅하였습니다.
+- Microsoft 서비스 이외의 모든 프로그램을 사용하지 않고, 문제가 발생하는지 확인하였습니다.
+- 보안 관련 3개 프로세스가 사용하지 않음에도 자동으로 실행되어서, 1개씩 삭제해가며 문제가 발생하는지 확인하였습니다.
+  - 해당 프로세스 : Malwarebytes , AhnLab, nProtect
+- Microsoft 서비스 또는 프로세스를 제외한 어떤 프로세스도 중단된 상태임에도, 문제가 계속 발생하였습니다.
+- 결론적으로, Microsoft 서비스 또는 프로세스가 문제의 원인임을 파악 한뒤 정보를 공유하였습니다.
+
+### Microsoft 서비스/프로세스 디버깅
+
+- clean boot상태에서 Process Monitor를 사용하여 원인을 파악하려고 하였습니다.
+- Process Monitor는 프로세스 동작을 로그로 남겨주고, 부팅 시점에도 로그를 남길 수 있습니다.
+- 문제 상황에 대한 Process Monitor 로그를 공유하였습니다.
+
+### 원인 파악 완료
+
+- 문제가 되는 폴더 `C:\ProgramData\FeedbackSecure\MaintOrfc`를 발견하였습니다.
+  - 작업 스케줄러가 해당 폴더의 DLL을 실행시켜서 문제를 발생시킴을 발견하였습니다.
+- 해당 폴더는 3가지 의심스러운 구석이 있었습니다.
+  - `ProgramData` 폴더 위치에 \*.dll 파일들이 저장되어 있음.
+  - 보호된 운영체제 파일 옵션에 의해 파일이 숨겨져있었습니다.
+  - 관리자 권한으로도 접근할 수 없음.
+- cmd를 사용하여 해당 폴더의 소유권을 관리자 계정으로 변경하는 방법으로 해당 폴더에 대한 권한을 얻었습니다.
+- 해당 폴더의 DLL을 사용하는 프로세스를 찾아서, 해당 프로세스를 중지시켰습니다.
+  - 해당 폴더가 작업에 사용되므로, 폴더 이름 변경 또는 삭제가 불가합니다.
+- `FeedbackSecure` 폴더의 이름을 `FeedbackSecure.rename`으로 변경하였습니다.
+  - 작업 스케줄러가 해당 포덜의 DLL을 실행시키지 않으려면, 리소스 파일 삭제 또는 path 찾기 불가 방법이 있습니다.
+  - 해당 파일이 중요할수도 있으므로, 삭제보다는 이름 변경을 통해 path 찾기 불가 방법을 사용하였습니다.
+- 문제 발생을 확인한 결과, 이후에는 문제가 발생하지 않음을 확인하였고, 정보를 공유하였습니다.
+
+## 문제 해결
+
+- 원인을 파악하였으므로, 해당 폴더에 대한 조치를 하였습니다.
+- Farbar의 fix 동작을 실행시켜서, 조언자가 제공한 fixlist.txt를 처리하였습니다.
+- 이번 fix 동작 주요 작업은 다음과 같습니다.
+  - 의심스러운 작업 스케줄러 삭제
+    - `Task: {4E88D42C-A837-436D-81FB-54D14B1B388C} - System32\Tasks\Microsoft\Windows\.NET Framework\SystemelEvents => C:\Windows\system32\RUNDLL32.exe [89600 2024-07-10] (Microsoft Windows -> Microsoft Corporation) -> C:\ProgramData\FeedbackSecure\MaintOrfc\C:\ProgramData\FeedbackSecure\MaintOrfc\DICAagPlayres.dll SymremWPurjflowTUytiv4918`
+    - 문제 원인 폴더를 실행시키는 스케줄러 작업을 삭제하였습니다.
+  - 의심스러운 드라이버 제거
+    - `R3 cpuz158; C:\Windows\temp\cpuz158\cpuz158_x64.sys [44592 2025-03-26] (Microsoft Windows Hardware Compatibility Publisher -> CPUID) <==== ATTENTION`
+      - `C:\Windows\temp\`에 위치한 CPU-Z 드라이버를 삭제하였습니다.
+      - `temp`에 위치한 드라이버는 보안 위험이 내재되어있습니다.
+      - 정상적인 드라이버라면 ` C:\Windows\System32\drivers\`에 있어야합니다.
+    - `S3 TKRgFt; \??\C:\Windows\system32\TKRgFtXp64.sys [X]`
+      `S3 TKRgAc; \??\C:\Windows\system32\TKRgAc2k64.sys [X]`
+      - 드라이버 파일이 존재하지 않지만, 레지스트리에 남아있는 항목 삭제
+  - 의심스러운 Alternate Date Stream (ADS) 제거
+    - `AlternateDataStreams: C:\ProgramData\Microsoft\Windows\Start Menu\카카오톡.lnk:B3C6B27B3E [3442]`
+      - ADS는 악성코드가 백도어 또는 추가적인 실행 파일을 숨기는데 사용될 수 있으므로, 삭제하여 보안 위협을 제거해야합니다.
+  - 불필요한 방화벽 규칙 삭제
+    - `FirewallRules: [{F498D7E3-22D1-49AA-BF10-2B5F8D46735A}] => (Allow) C:\Program Files (x86)\INCAInternet\nProtect Online Security\npupdatec.exe => No File`
+      - `npupdatec.exe`는 nProtect Online Security 관련 파일인데, 현재 존재하지 않으므로, 정리하는 것이 좋습니다.
+    - `FirewallRules: [TCP Query User{ECC17FA7-8E8B-4E67-8272-8C40D484CEEA}C:\program files (x86)\crosscert\unisigncrsv3\unicrslocalserver.exe] => (Allow) ...`
+    - `FirewallRules: [UDP Query User{A8EE7C40-5E78-488D-AF15-657EB4CB93BE}C:\program files (x86)\crosscert\unisigncrsv3\unicrslocalserver.exe] => (Allow) ...`
+      - `unisigncrsv3` 관련 파일이 없으므로, 정리하였습니다.
+  - PowerShell 및 배치 스크립트 실행
+    ```txt
+    StartPowerShell:
+    md C:\Tools
+    Invoke-webrequest https://download.microsoft.com/.../hvciscan_amd64.exe -OutFile C:\Tools\hvciscan_amd64.exe
+    EndPowerShell:
+    ```
+    - Microsoft의 `hvciscan_amd64.exe` 도구를 다운로드합니다.
+    - `hvciscan_amd64.exe`는 Hpyervisor Code Integrity 기능이 활성화되어있는지 검사합니다.
+    ```txt
+    StartBatch:
+    md C:\Drivers
+    DISM /online /export-driver /destination:C:\Drivers
+    DISM /online /get-drivers /format:table
+    C:\Tools\hvciscan_amd64.exe
+    EndBatch:
+    ```
+    - 현재 시스템의 드라이버를 `C:\Drivers` 폴더로 백업하고, 시스템의 모든 드라이버 목록을 출력합니다.
+    - `hvciscan_amd64.exe`를 실행합니다.
+  - 불필요한 파일 정리
+    `C:\ProgramData\FeedbackSecure`
+    - `FeedbackSecure` 폴더를 삭제합니다. - 해당 폴더 이름이 변경되었기 때문에 변경된 이름을 기입하여야 합니다.
+      `EmptyTemp:`
+    - 모든 임시 파일을 정리합니다.
+
+# 결론
+
+- 문제가 되는 폴더는 `C:\ProgramData\FeedbackSecure\maintOrfc` 였습니다.
+- 해당 폴더의 \*.dll을 작업 스케줄러가 실행시켜서, 주기적으로 `svchost.exe`와 `wscript.exe`가 window defender 검사 예외대상에 등록되었습니다.
+- 해당 폴더는 약 24-04-28에 생성된 폴더로, 어떻게 생성되었는지는 알 수 없었습니다.
+- 또한 해당 프로세스가 어떤 작업을 하였는지도 정확하게 알수가 없기 때문에, 제 모든 계정의 보안을 강화할 필요가 있습니다.
+
+## 생각 정리
+
+- 문제를 대처하는 과정에서 윈도우에는 편리하고 UI가 깔끔한 디버깅 도구가 많이 있다는 사실을 알게 되었습니다.
+  - process monitor 프로그램이 깔끔하고 편리한 UI를 제공하고 필터링 속도도 빨라서 놀랐습니다.
+  - 리눅스에도 깔끔하고 편리한 프로그램이 있는지 궁금하네요.
+- 디버깅 도구를 사용하면서 윈도우 시스템의 운영체제적 특성을 학습하고 운영체제 지식을 복습할 수 있었습니다.
+  - 파일시스템, 프로세스, 서비스 등의 개념을 복습해볼 수 있었습니다.
+- 악성 프로그램이 생각보다 오랜기간 내재되어 있고, 언제 실행될지 모른다는 사실을 알게되었습니다.
+  - 언제부터 해당 프로그램이 실행되어왔고, 어떤 동작을 하였는지 제 실력으로는 알수 없기 때문에, 잠재적 보안 위협에 대한 두려움을 느끼게 되었습니다.
+  - 이를 예방하기 위해서, 신뢰할 수 없는 파일은 컴퓨터에서 사용해선 안되고, 종종 백신 프로그램을 점검할 필요가 있다고 생각됩니다.

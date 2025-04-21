@@ -1,0 +1,202 @@
+---
+title: '[FE]브라우저 저장소'
+date: '2025-03-16'
+tags: ['browser', 'browser-storage']
+draft: false
+summary: '브라우저에서 제공하는 저장소에 대해서 알아보겠습니다'
+---
+
+# 배경
+
+- 프론트 개발 시 사용되는 브라우저에 대해 알아본다.
+- 브라우저에 대한 간단한 개념을 학습한다.
+
+## 브라우저의 저장소
+
+### 쿠키 (document.cookie) 방법
+
+- 정의 : 브라우저에 저장되는 작은 크기의 문자열
+- 특징
+
+  - name=value; 형식으로 구성되어있다.
+    ```text
+    n1=value1; n2=value2; n3=value3;
+    ```
+  - name=value 쌍운 4KB이하 크기여야한다.
+  - 도메인 하나당 저장할 수 있는 쿠키 개수는 약 20여개로 제한적이며 브라우저 마다 개수가 다릅니다.
+  - 쿠키는 기본적으로 도메인만 확인하며 HTTP/HTTPS 프로토콜은 확인하지 않습니다.
+  - 여러가지 옵션이 존재한다. 브라우저 버전에따라 미지원할 수 있습니다.
+    - path : 쿠키 접근을 허용할 URL 경로 또는 하위경로.
+    - domain : 쿠키에 접근 가능한 도메인 지정. 단, 제약사항이 있음.
+    - expires : 유효한 일자를 지정. 반드시 GMT 포맷으로 설정 필요
+    - max-age : 유효한 시간(초)를 지정.
+    - secure : HTTPS로 통신하는 경우에만 쿠키가 전송하도록 설정
+    - samesite : XSRF 공격을 막기위한 옵션.
+    - httpOnly : 클라이언트 측 스크립트의 쿠키 사용 불가 설정.
+  - 쿠키 옵션 형식은 name=value 쌍뒤에 나열됩니다.
+
+  ```javascript
+  // user 쿠기에 path, expires 옵션이 존재
+  document.cookie = 'user=John; path=/; expires=Tue, 19 Jan 2038 03:14:07 GMT'
+  ```
+
+- **생성 방법**
+  1. 서버가 HTTP 응답 헤더의 Set-Cookie에 내용을 넣어서 브라우저에 전달.
+  2. 브라우저는 내용을 자체적으로 저장
+  3. 생성된 쿠키는 동일서버에 요청을 보낼 때마다, 요청 헤더에 넣어서 함께 전달
+- 브라우저에서 JS로 쿠키 접근 방법
+
+  - document.cookie 프로퍼티를 이용
+
+  ```javascript
+  alert(document.cookie) // cookie1=value1; cookie2=value2;...
+  ```
+
+- **브라우저에서 JS로 쿠키 쓰는 방법**
+
+```javascript
+document.cookie = 'user=John' // 이름이 'user'인 쿠키의 값만 갱신함
+alert(document.cookie) // 모든 쿠키 보여주기
+```
+
+```javascript
+// 특수 값(공백)은 인코딩 처리해 줘야 합니다.
+let name = 'my name'
+let value = 'John Smith'
+
+// 인코딩 처리를 해, 쿠키를 my%20name=John%20Smith 로 변경하였습니다.
+document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value)
+
+alert(document.cookie) // ...; my%20name=John%20Smith
+```
+
+- **서드파트 쿠키**
+  - 정의 : 사용자가 방문 중인 도메인이 아닌 다른 도메인에서 설정한 쿠키
+  - 예시
+    - 광고 배너
+      - 서드 파티 쿠키에 사용자 식별 정보를 저장하고, 사용자가 방문한 웹사이트마다 광고배너에서 GET 요청 발생시 사용자 사용 행태를 추적함
+- **사용자 개인 정보 보호 법안**
+
+  - 쿠키 등을 사용하여 사용자 개인 정보를 저장할 때, 나라 또는 연합마다 법안을 살펴바야합니다.
+  - 예시
+    - EU는 GDPR 법령을 통해 쿠키를 사용하여 추적하는 경우 사용자의 명시적 허가를 얻어야한다는 법안이 존재
+    -
+
+- **참조**
+  - 모던 자바스크립트
+    :https://ko.javascript.info/cookie
+
+### Local Storage
+
+- 정의 : 브라우저 내에 키-값 쌍을 저장하는 web storage object
+- 특징
+
+  - iterable 객체가 아닙니다.
+  - 키와 값은 반드시 문자열이어야합니다.
+  - 만료되지 않습니다.
+  - 크기 제한은 5MB 정도이며, 브라우저마다 다릅니다.
+  - 오리진(domain,port,protocol)만 같다면 url 경로는 달라도 key-value가 공유됩니다.
+  - 브라우저를 껐다 켜도 데이터가 유지됩니다.
+
+- **메서드**
+  - setItem(key,value) : 키-값 쌍을 보관합니다.
+  - getItem(key) : 키에 해당하는 값을 읽습니다.
+  - removeItem(key) : 키와 해당값을 삭제합니다.
+  - clear() : 모든 것을 삭제합니다.
+  - key(index) : 인덱스에 해당하는 키를 받아옵니다.
+  - length : 저장된 항목의 개수를 얻습니다.
+- **필드**
+
+  - length : 저장된 항목의 개수를 얻습니다.
+
+- **예제**
+
+```js
+//예제1 : 순회
+let keys = Object.keys(localStorage)
+for (let key of keys) {
+  alert(`${key}: ${localStorage.getItem(key)}`)
+}
+
+//예제2 : 키-값 쌍 생성
+localStorage.setItem('user', JSON.stringify({ name: 'John' }))
+
+// 잠시 후
+let user = JSON.parse(localStorage.user)
+alert(user.name) // John
+```
+
+- **Storage Event**
+
+  - 정의 : Local 또는 Session Storage가 갱신될 때 발생하는 이벤트
+  - 특징
+    - 다음 프로퍼티를 지원합니다.
+      - key : 변경된 데이터의 키
+      - oldValue : 이전 값
+      - newValue : 새로운 값
+      - url : 갱신이 일어난 문서의 url
+      - storageArea : 갱신이 일어난 localStorage 또는 SessionStorage 객체
+    - 이벤트를 발생시킨 window 객체를 제외하고 스토리지에 접근 가능한 window 객체 전부에서 이벤트가 발생합니다.
+    - event.url을 통해 이벤트가 갱신된 문서의 URL을 확인 할 수 있습니다.
+    - 이벤트를 통해서, Storage 변화에 대한 응답 로직을 추가할 수 있습니다.
+
+- 출처
+  ref:https://ko.javascript.info/localstorage
+
+### SessionStorage
+
+- 정의 : 세션이 유지되는 동안, 브라우저 내에 키-값 쌍을 저장하는 web storage object
+- 특징
+
+  - 세션에 의존합니다.
+  - 새로고침을 해도 데이터가 유지됩니다.
+  - 그외에는 Local Storage와 동일합니다.
+
+- **세션이 유지되는 경우**
+  - 현재 탭에서만 동일한 오리진에서 자바스크립트를 실행하는 경우
+  - 하나의 탭에 여러개의 iframe이 있는 경우
+    - iframe 포함하여 모두 동일한 오리진에서 왔다고 취급되어 session Storage가 공유됩니다.
+  - 즉, 현재 탭에서 벗어나면 데이터는 사라집니다.
+- 출처
+  ref :https://ko.javascript.info/localstorage
+
+### Cookie와 Local & Session Storage 차이점
+
+1. 네트워크 요청시 서버 전송 유무
+   - 쿠키는 생성된 도메인 서버에 요청을 보낼때, 자동으로 서버로 전송됩니다.
+   - 반면, Local & Session Storage는 네트워크 요청시 서버로 전성되지 않습니다.
+2. 저장 용량 차이
+   - 쿠키는 자동으로 전송되므로 약 2KB의 용량을 갖습니다.
+   - 반면, Local & Session Storage는 2MB 이상의 용량을 가질 수 있으며, 개발자가 Storage 구성 방식을 설정할 수 있습니다.
+3. 조작 방식 차이
+   - 쿠키는 HTTP 헤더와 자바스크립트를 사용하여 조작할 수 있습니다.
+   - 반면, Local & Session Storage는 자바스크립트 내에서만 수행됩니다.
+4. 접근 판단 유무
+   - 쿠키는 기본적으로 도메인만으로 접근 권한을 판단합니다.
+     secure 허용시 HTTPS 프로토콜만 접근 허용합니다.
+   - Local & Session Storage는 도메인,프로토콜,포트로 정의되는 Origin으로 묶어서 데이터 접근 권한 허용을 판단합니다.
+
+- 출처
+  ref : https://ko.javascript.info/localstorage
+
+### Indexed DB
+
+- 현재는 사용할 예정아니므로, 존재와 간략한 특징만 명시만 하겠습니다.
+
+- 정의 : 브라우저에서 생성된 DB
+
+- 특징
+
+  - key-value 쌍을 저장
+  - value 값은 여러가지 타입이 가능
+  - 트랜잭션 기능 제공
+  - 키 범위 쿼리와 인덱스 기능 제공
+  - localStorage 보다 더 거대한 용량 제공
+  - 동일 origin에서만 접근 가능
+
+- 사용 예제
+
+  - 오프라인 앱
+
+- 출처
+  ref :https://javascript.info/indexeddb

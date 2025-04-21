@@ -1,0 +1,94 @@
+---
+title: '[js]모듈-이해하기'
+date: '2025-03-16'
+tags: ['grammar', 'modern-js']
+draft: false
+summary: 'js에서 모듈개념을 이해합니다.'
+---
+
+## 모듈
+
+- 정의 : 어플리케이션을 구성하는 파일 중 하나의 파일을 의미합니다.
+- 특징
+
+  - `import`와 `export`를 사용하여 모듈을 공유됩니다.
+    - 즉, import된 모듈 메모리는 다른 파일들 간에 공유됩니다.
+  - 브라우저(순수 자바스크립트) 환경과 Node.js 환경에 따라 구현차이와 동작차이가 존재합니다.
+  - 모듈은 최초 import시 단 한번만 `evaluation`됩니다.
+  - use strict 모드로 실행됩니다.
+  - 모듈 최상위 레벨의 this는 `undefined`입니다.
+    - 일반 스크립의 this는 전역(window 또는 global) 입니다.
+
+- ref :https://ko.javascript.info/modules-intro
+
+### 브라우저에서 모듈 스크립트 특징
+
+- React 사용시에는 신경 쓰지 않아도 됩니다.
+  - Reat에서는 import 모듈을 `<script type="module">`으로 변환하지 않고, 번들러가 하나의 JS 파일로 묶어서 `<script>` 태그로 로드합니다.
+    - ref : gpt
+- 순수 자바스크립트 사용시 신경써야합니다.
+- 브라우저에서 `type="module"`이 붙은 스크립트는 일반 스크립트와 차이가 있습니다.
+
+1. 모듈 스크립트는 항상 지연실행됩니다.
+
+- 외부 모듈 스크립트 다운로드시, html 처리가 멈추지 않고 병렬적으로 외부 모듈 스크립트와 기타 리소스를 불러옵니다.
+- 모듈 스크립트는 html 문서가 완전히 만들어질 떄까지 대기상태 유지한 후에 실행됩니다.
+
+```html
+<script type="module">
+  alert(typeof button) // 모듈 스크립트는 지연 실행되기 때문에 페이지가 모두 로드되고 난 다음에 alert 함수가 실행되므로
+  // 얼럿창에 object가 정상적으로 출력됩니다. 모듈 스크립트는 아래쪽의 button 요소를 '볼 수' 있죠.
+</script>
+
+하단의 일반 스크립트와 비교해 봅시다.
+
+<script>
+  alert(typeof button) // 일반 스크립트는 페이지가 완전히 구성되기 전이라도 바로 실행됩니다.
+  // 버튼 요소가 페이지에 만들어지기 전에 접근하였기 때문에 undefined가 출력되는 것을 확인할 수 있습니다.
+</script>
+
+<button id="button">Button</button>
+```
+
+2. 인라인 스크립트의 비동기 처리됩니다.
+
+- `async` 속성이 붙은 스크립트는 로딩이 끝나면, 다른 스크립트나 HTML 문서가 처리되길 기다리지 않고 바로 실행된다.
+- 반면, 모듈 스크립트에선 `async` 속성을 적용하여 다른 스크립트나 HTML이 처리되길 기다리지 않고 바로 실행가능하다.
+
+```html
+<!-- 필요한 모듈(analytics.js)의 로드가 끝나면 -->
+<!-- 문서나 다른 <script>가 로드되길 기다리지 않고 바로 실행됩니다.-->
+<script async type="module">
+  import { counter } from './analytics.js'
+
+  counter.count()
+</script>
+```
+
+3. 외부 스크립트의 최적화와 보안성을 강화합니다.
+
+- `type="module" src="external.js"`와 같이 src 속성값이 동일한 외부 스크립트는 한번만 실행됩니다.
+- 모듈이 저장된 원격 서버가 ` Access-Control-Allow-Origin: *` 헤더를 제공해야만 외뷰 모듈을 불러올 수 있습니다.
+
+4. 경로가 없는 모듈은 금지합니다.
+
+- `import` 앞에는 반드시 상대 경로 또는 절대 URL이 앞에 와야합니다.
+
+### 빌드 툴
+
+정의 : 브라우저 환경에서 복수의 모듈을 번들링하여 프로덕션 서버에 올리는 툴
+
+- 특징
+
+  - 경로가 없는 모듈을 사용할 수 있게 해줍니다.
+  - CSS,HTML 포맷 모듈을 사용할수 있게 해줍니다.
+  - 모듈간의 의존 관계를 파악하여, 모듈 전체를 한데 모아 하나의 큰 파일을 만들거나 여러개의 파일로 만들어, 변형과 최적화를 수행한다.
+    - tree-shaking
+    - console, debugger 같은 개발 관련 코드 삭제
+    - Babel을 사용하여 최신 JS 문법을 동일한 기능을 하는 낮은 버전 JS로 변환
+    - 공백 제거 및 변수이름 줄이기 등을 통해 산출물의 크기 축소
+  - 번들링 전에 스크립트에 있던 `import`,`export`문은 특별한 번들러 함수로 대체되어 일반 스크립트로 취급됩니다.
+
+- 예시 : webpack
+
+- ref : https://ko.javascript.info/modules-intro

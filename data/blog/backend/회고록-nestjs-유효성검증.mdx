@@ -1,0 +1,876 @@
+---
+title: 회고록-nestjs-유효성검증
+date: '2025-01-28'
+tags: ['validation', 'class-transformer', 'class-validator', 'nest-js']
+draft: false
+---
+
+# 배경
+
+- Nextjs 에서 제시하는 유효성검증 패키지를 정리하는 시간을 갖겠습니다.
+- 유효성 검증에 사용되는 `class-validator`와 `class-transformer`에 대해 알아보겠습니다.
+
+# 본론
+
+## Nestjs의 유효성 검증
+
+# 관련 개념
+
+## `class-transformer` 패키지
+
+- 목적 : ts에서 plain JS object를 class 객체로 손쉽게 트랜스폼해줍니다.
+- 특징
+
+  - Class Object, Plain Object,serialized 등으로 변환할 수 있는 다양한 메소드 제공합니다.
+  - 프로퍼티를 노출하거나 숨길 수 있는 데코레이터 또는 다양한 옵션을 제공합니다.
+  - class-validator 패키지와 함께 사용할 수 있습니다.
+    - 두 모듈모두 동일한 팀에서 개발되어 호환성이 높습니다.
+
+- 참조
+
+  - class-validator 공식 문서
+    - https://github.com/typestack/class-transformer
+
+- 여기서는 일부의 활용 예제만 알아보겠습니다.
+
+### Transform 메소드
+
+- 예시 : plain object -> class object 변환
+
+```ts
+import { plainToInstance, instanceToPlain } from 'class-transformer'
+import { User } from './User'
+
+//transform user plain object to a User class instance. also supports arrays
+let users: User[] = plainToInstance(User, userJson)
+```
+
+- 예시 : class object -> plain object 변환
+
+```ts
+import { instanceToPlain } from 'class-transformer'
+
+const photo = new Photo()
+// transform your Photo class object back to plain javascript object, that can be JSON.stringify later.
+let plainPhoto = instanceToPlain(photo)
+```
+
+- 예시 : class object -> class object 변환
+
+```ts
+import { instanceToInstance } from 'class-transformer'
+
+const photo = new Photo()
+
+//transform Photo class object into a new instance of that class object. This may be treated as deep clone of your objects.
+let copiedPhoto = instanceToInstance(photo)
+```
+
+### nested object 변환
+
+- 예시 : nested object 변환
+
+```ts
+import { Type, plainToInstance } from 'class-transformer'
+
+export class Album {
+  id: number
+
+  name: string
+
+  /*should implicitly specify what type of object each property contain by using @Type decorator
+   */
+  @Type(() => Photo)
+  photos: Photo[]
+}
+
+export class Photo {
+  id: number
+  filename: string
+}
+
+let album = plainToInstance(Album, albumJson)
+// now album is Album object with Photo objects inside
+```
+
+- 예시 : nested array object 변환
+
+```ts
+import { Type } from 'class-transformer'
+
+export class Photo {
+  id: number
+
+  name: string
+
+  @Type(() => Album)
+  albums: Album[] // when using array, should provide a type of the object that array contains by using @Type()
+}
+```
+
+```ts
+import { Type } from 'class-transformer'
+
+// (*) custom array type
+export class AlbumCollection extends Array<Album> {
+  // custom array functions ...
+}
+
+export class Photo {
+  id: number
+
+  name: string
+
+  @Type(() => Album)
+  albums: AlbumCollection //  lib handle proper transformation automatically
+}
+```
+
+```ts
+export class Skill {
+  name: string
+}
+
+export class Weapon {
+  name: string
+  range: number
+}
+
+export class Player {
+  name: string
+
+  //ES6 collections Set and Map also require the @Type decorator:
+  @Type(() => Skill)
+  skills: Set<Skill>
+
+  @Type(() => Weapon)
+  weapons: Map<string, Weapon>
+}
+```
+
+### 데코레이터
+
+- 예시 : @Expose 데코레이터
+
+```ts
+import { Expose } from 'class-transformer'
+import { instanceToPlain } from 'class-transformer'
+/* @Expose() makes property exposed when class instance is created by transform method from "class-transformer"
+ */
+export class User {
+  @Expose({ name: 'uid' }) // (*) expose this field as 'uid'
+  id: number
+
+  firstName: string
+  lastName: string
+  password: string
+
+  @Expose() // (**) expose this method
+  get name() {
+    return this.firstName + ' ' + this.lastName
+  }
+
+  @Expose() // (***) expose this method
+  getFullName() {
+    return this.firstName + ' ' + this.lastName
+  }
+}
+
+// instance has all properties
+const user = new User()
+
+// Both objects only have 'uid' , name getter and geFullName method.
+let userPlain = instanceToPlain(user)
+let useInstance = instanceToInstance(User, user)
+```
+
+- 예시 : @Expose 데코레이터 group 옵션
+
+```ts
+import { Exclude, Expose, instanceToPlain } from 'class-transformer'
+
+export class User {
+  id: number
+
+  name: string
+
+  @Expose({ groups: ['user', 'admin'] }) // this means that this data will be exposed only to users and admins
+  email: string
+
+  @Expose({ groups: ['user'] }) // this means that this data will be exposed only to users
+  password: string
+}
+
+let user1 = instanceToPlain(user, { groups: ['user'] }) // will contain id, name, email and password
+let user2 = instanceToPlain(user, { groups: ['admin'] }) // will contain id, name and email
+```
+
+- 예시 : @Expose 데코레이터 version 옵션
+
+```ts
+import { Exclude, Expose, instanceToPlain } from 'class-transformer'
+
+export class User {
+  id: number
+
+  name: string
+
+  @Expose({ since: 0.7, until: 1 }) // this means that this property will be exposed for version starting from 0.7 until 1
+  email: string
+
+  @Expose({ since: 2.1 }) // this means that this property will be exposed for version starting from 2.1
+  password: string
+}
+
+let user1 = instanceToPlain(user, { version: 0.5 }) // will contain id and name
+let user2 = instanceToPlain(user, { version: 0.7 }) // will contain id, name and email
+let user3 = instanceToPlain(user, { version: 1 }) // will contain id and name
+let user4 = instanceToPlain(user, { version: 2 }) // will contain id and name
+let user5 = instanceToPlain(user, { version: 2.1 }) // will contain id, name and password
+```
+
+- 예시 : @Exclude 데코레이터
+
+```ts
+import { Exclude } from 'class-transformer'
+
+/* @Exclude() makes property excluded when class instance is created by transform method from "class-transformer"
+ */
+export class User {
+  id: number
+
+  email: string
+
+  @Exclude()
+  password: string
+}
+
+// instance doesn't have 'password'
+let user = instanceToPlain(User)
+```
+
+- 예시 : @Exclude 데코레이터 클래스에 사용
+
+```ts
+import { Exclude } from 'class-transformer'
+/* @Exclude() on class makes all properties excluded and expose only those are needed explicitly by using @Expose
+ */
+@Exclude()
+export class User {
+  @Expose()
+  id: number
+
+  @Expose()
+  email: string
+
+  password: string
+}
+
+// instance doesn't have 'password'
+let user = instanceToPlain(User)
+```
+
+### @Transform() 데코레이터
+
+- 목적 : 커스텀 변환을 제공하는 데코레이터
+
+- 예시 : 커스텀 변환
+
+```ts
+import { Transform } from 'class-transformer';
+import * as moment from 'moment';
+import { Moment } from 'moment';
+
+export class Photo {
+  id: number;
+
+  Type(()=> String)
+  tags: string[];
+
+  @Type(() => Date)
+  date: Date;
+
+  // create _metaData properties by transforming plain object to PhotoMetaData class instance
+  @Transform(({obj}) => PhotoMetaData(obj.date,obj.tags))
+  _metaData : PhotoMetaData
+}
+
+// photoJson doesn't have _metaData, but photo has _metaData because @Transform() create it by converting
+let photo = plainToClass(Photo,photoJson);
+```
+
+- 콜백 인자
+
+```
+@Transform(({ value, key, obj, type }) => value)
+```
+
+| Argument | Description                                             |
+| -------- | ------------------------------------------------------- |
+| value    | The property value before the transformation.           |
+| key      | The name of the transformed property.                   |
+| obj      | The transformation source object.                       |
+| type     | The transformation type.                                |
+| options  | The options object passed to the transformation method. |
+
+## class-validator
+
+- 목적 : 클래스 인스턴스 또는 변수의 유효성 검증
+
+- 특징
+  - `validator` 패키지를 기반으로 검증 로직을 합니다.
+  - 데코레이터 방식으로 클래스 필드 유효성 검증합니다.
+    - 데코레이터 방식이외에도 메소드 방식으로 변수의 유효성을 검증 할수 있습니다.
+  - validation 데코레이터는 클래스 상속시 자식클래스로 상속됩니다.
+  - 커스텀 유효성검증 클래스 또는 데코레이터를 생성하여 재사용성을 높일 수 있습니다.
+  - 데코레이터 방식은 클래스 인스턴스에만 반영됩니다.
+    - 리터럴 객체나 JSON.parse()로 반환된 형식은 클래스 필드에 적용된 데코레이터가 적용되지 않습니다.
+    - 이러한 형식에 데코레이터 검증을 사용하고 싶다면, `class-transformer` 패키지를 사용하여 변환해야합니다.
+- 참조
+  - `class-validator` 공식문서
+    - https://github.com/typestack/class-validator?tab=readme-ov-file
+  - `validator` 공식문서
+    - https://github.com/validatorjs/validator.js
+
+### Basic Usage
+
+- `validate()` 또는 `validateOrReject()`를 사용하여 클래스 인스턴스를 검증합니다.
+- `validate()`는 다양한 옵션을 제공합니다.
+
+```ts
+// validate function options
+export interface ValidatorOptions {
+  skipMissingProperties?: boolean
+  whitelist?: boolean
+  forbidNonWhitelisted?: boolean
+  groups?: string[]
+  dismissDefaultMessages?: boolean
+  validationError?: { target?: boolean; value?: boolean }
+
+  forbidUnknownValues?: boolean
+  stopAtFirstError?: boolean
+}
+```
+
+- `validate()`는 `ValidationError[]` 타입을 반환합니다. 해당 타입은 검증 실패 정보를 갖고 있습니다.
+
+```ts
+{
+    target: Object; // Object that was validated.
+    property: string; // Object's property that haven't pass validation.
+    value: any; // Value that haven't pass a validation.
+    constraints?: { // Constraints that failed validation with error messages.
+        [type: string]: string;
+    };
+    children?: ValidationError[]; // Contains all nested validation errors of the property
+}
+```
+
+- 예시 : 클래스 인스턴스 유효성검증
+
+```ts
+import {
+  validate,
+  validateOrReject,
+  Contains,
+  IsInt,
+  Length,
+  IsEmail,
+  IsFQDN,
+  IsDate,
+  Min,
+  Max,
+} from 'class-validator'
+
+// define class with validation decorator
+export class Post {
+  @Length(10, 20)
+  title: string
+
+  @Contains('hello')
+  text: string
+
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  rating: number
+
+  @IsEmail()
+  email: string
+
+  @IsFQDN()
+  site: string
+
+  @IsDate()
+  createDate: Date
+}
+
+// should create instance by using class constructor
+let post = new Post()
+post.title = 'Hello' // should not pass
+post.text = 'this is a great post about hell world' // should not pass
+post.rating = 11 // should not pass
+post.email = 'google.com' // should not pass
+post.site = 'googlecom' // should not pass
+
+/*There are basically 3 ways to validate class instance
+ */
+
+//(1) use validate() method
+validate(post).then((errors) => {
+  // errors is an array of validation errors
+  if (errors.length > 0) {
+    console.log('validation failed. errors: ', errors)
+  } else {
+    console.log('validation succeed')
+  }
+})
+
+//(2) use validateOrReject() method
+validateOrReject(post).catch((errors) => {
+  console.log('Promise rejected (validation failed). Errors: ', errors)
+})
+
+//(3) use validateOrReject method with async/await
+async function validateOrRejectExample(input) {
+  try {
+    await validateOrReject(input)
+  } catch (errors) {
+    console.log('Caught promise rejection (validation failed). Errors: ', errors)
+  }
+}
+```
+
+- 예시 : ValidateError 객체
+
+```ts
+// 위 예시에서 선언된 Post 클래스 활용
+
+let post = new Post()
+post.title = 'Hello' // should not pass
+post.text = 'this is a great post about hell world' // should not pass
+
+//validate instance by calling validate() method
+validate(post).then((errors) => {
+  // validate() returns ValidationError
+  if (errors.length > 0) {
+    console.log('ValidationError list:', errors)
+  } else {
+    console.log('validation succeed')
+  }
+})
+
+/*
+#result
+ValidationError list:
+[{
+    target: post,
+    property: "title",
+    value: "Hello",
+    constraints: {
+        length: "$property must be longer than or equal to 10 characters"
+    }
+}, {
+    target: postInstance,
+    property: "text",
+    value: "this is a great post about hell world",
+    constraints: {
+        contains: "text must contain a hello string"
+    }
+},
+]
+
+
+*/
+```
+
+### Validate Arrays and Collections
+
+- 예시 : Array 유효성 검증
+
+```ts
+import { MinLength, MaxLength } from 'class-validator'
+
+export class Post {
+  @MaxLength(20, {
+    each: true, // (*) perform validation of each item in array
+  })
+  tags: string[]
+}
+```
+
+- 예시 : Set 유효성 검증
+
+```ts
+import { MinLength, MaxLength } from 'class-validator'
+
+export class Post {
+  @MaxLength(20, {
+    each: true, // (*) perform validation of each item in set
+  })
+  tags: Set<string>
+}
+```
+
+- 예시 : Map 유효성 검증
+
+```ts
+import { MinLength, MaxLength } from 'class-validator'
+
+export class Post {
+  @MaxLength(20, { each: true })
+  tags: Map<string, string> // (*) perform validation of each item in set
+}
+```
+
+### Validate Nested object
+
+- 예시 : Nested object 유효성 검증
+
+```ts
+import { ValidateNested } from 'class-validator'
+
+export class Post {
+  @ValidateNested() //(*) preform validation of nested object
+  user: User // nested object should be an instance of a class, otherwise @ValidateNested won't know what class is target of validation
+}
+```
+
+- 에시 : multi-dimensional array 유효성검증
+
+```ts
+import { ValidateNested } from 'class-validator'
+
+export class Plan2D {
+  @ValidateNested()
+  matrix: Point[][]
+}
+```
+
+- 예시 : Promise 유효성 검증
+
+```ts
+import { ValidatePromise, Min } from 'class-validator'
+
+export class Post {
+  @Min(0)
+  @ValidatePromise() // (*) validate promise-returned value
+  userId: Promise<number>
+}
+```
+
+```ts
+import { ValidateNested, ValidatePromise } from 'class-validator'
+
+export class Post {
+  @ValidateNested() // (**) validate nested object instance from promise
+  @ValidatePromise() // (*) validate promise-returned value
+  user: Promise<User>
+}
+```
+
+### Inheriting Validation decorators
+
+- 부모클래스의 데코레이터는 자식클래스 필드에 동일하게 적용됩니다.
+- 자식 클래스에서 프로퍼티를 재정의한 경우, 해당 프로퍼티에는 부모 클래스의 데코레이터와 자식 클래스의 데코레이터가 모두 적용됩니다.
+
+- 예시 : redefined property 유효성 검증
+
+```ts
+import { validate } from 'class-validator'
+
+class BaseContent {
+  @IsEmail()
+  email: string
+
+  @IsString()
+  password: string //(*)
+}
+
+class User extends BaseContent {
+  @MinLength(10)
+  @MaxLength(20)
+  name: string
+
+  @Contains('hello')
+  welcome: string
+
+  @MinLength(20)
+  password: string // (**)
+}
+
+let user = new User()
+
+user.email = 'invalid email' // inherited property
+user.password = 'too short' // password wil be validated not only against IsString, but against MinLength as well
+user.name = 'not valid'
+user.welcome = 'helo'
+
+validate(user).then((errors) => {
+  // ...
+}) // it will return errors for email, password, name and welcome properties
+```
+
+### Conditional validation
+
+- 예시 : 조건부 유효성 검증
+
+```ts
+import { ValidateIf, IsNotEmpty, MinLength } from 'class-validator'
+
+export class Post {
+  otherProperty: string
+
+  @ValidateIf((o) => o.otherProperty === 'value') // (*) when the condition is false, all validation decorators are ignored
+  @IsNotEmpty() // (**) validate when otherProperty is "value"
+  @MinLength(10) // (**)
+  example: string
+}
+```
+
+## 트러블 슈팅
+
+### @Transform() 미동작
+
+- **상황**
+  - @Transform()을 사용하여 기존 객체를 사용하여 새로운 객체를 만들려고 한 상황
+  - controller 클래스에 `@UsePipes(new ValidationPipe({ transform: true }))` 적용
+
+```ts
+import { Transform, Type } from 'class-transformer'
+import { ArrayNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator'
+import { QuizContext } from '../interface/quiz-context'
+
+export class QuizContextDTO implements QuizContext {
+  @IsOptional()
+  @IsString()
+  artist?: string
+
+  @IsOptional()
+  @IsString()
+  tag?: string
+
+  @IsOptional()
+  @IsString()
+  style?: string
+
+  @Type(() => Number)
+  @IsNumber()
+  page!: number
+
+  @Transform(({ obj }) => [obj.artist, obj.tag, obj.style].filter((v) => v))
+  @ArrayNotEmpty({ message: 'At least one of artist, tag, or style must be provided!' })
+  _atLeastOne!: object // 내부 필드 검증용 더미 객체
+}
+```
+
+```ts
+  @Get('test')
+  async getTest(
+    @Query()
+    dto: QuizContextDTO,
+  ) {
+    Logger.log('test api:' + JSON.stringify(dto));
+    return 'success';
+  }
+```
+
+- 실제 결과
+
+  - @Transform()이 동작하지 않아서 매번 @ArrayNotEmpty() 유효성을 통과하지 못함
+  - QuizContextDTO 인스턴스 로그 출력시, `_atLeastOne` 필드가 null,undefined 아예 출력안됨
+
+- 기대 결과
+
+  - @Transform()이 동작하여 조건만족시 @ArrayNotEmpty()을 통과해야함
+
+- **문제 분석**
+
+  - 다음 문서를 참고하여 해본 시도해보니깐 해결됨...
+    - https://github.com/typestack/class-transformer/issues/1330
+  - (추가)
+    - 나와 동일한 이슈를 문제 해결 후 발견함
+      - https://github.com/typestack/class-transformer/issues/1599
+    - 근본적인 원인에 대해서 정상동작인지 질문하는 깃허브 이슈
+      - https://github.com/typestack/class-transformer/issues/1813
+
+- 참고문서 분석 결과, 변환전 오브젝트가 갖고 있지 않는 필드에 대한 `@Transform()`데코레이터는 동작하지 않음을 확인
+
+- 타입스크립트 환경에서 예제 코드를 실행하여 테스트 진행
+
+  - nestjs에서 `@ValidationPipe( { transform : true})` 사용시, `plainToClass()`를 사용하여 클래스 객체로 변환을 실행함을 확인
+    - nestjs 공식문서 참조
+      https://docs.nestjs.com/pipes#class-validator
+  - 따라서 테스트 코드는
+    1. `@Transform()` 데코레이터가 적용된 필드를 갖고 있지 않은 오브젝트를 사용
+    2. `plainToClass()`를 사용
+    3. 변환 결과에 `@Transform()` 데코레이터가 적용된 필드가 생성되었는지 확인 필요.
+
+- 테스트 코드
+
+```ts
+//main.ts
+import { Expose, plainToClass, Transform } from 'class-transformer'
+
+class User {
+  page!: string
+
+  @Expose()
+  @Transform(({ obj, value }) => obj.page)
+  checkPage!: string
+}
+
+const user1 = { page: '1' }
+const user2 = { page: '2', checkPage: 22 }
+// user.checkPage = 1;
+
+console.log('before user1:', user1)
+console.log('before user2:', user2)
+
+const instance1 = plainToClass(User, user1)
+const instance2 = plainToClass(User, user2)
+
+console.log('after instance1', instance1)
+console.log('after instance2', instance2)
+```
+
+- 테스트 결과 : `@Expose()`를 사용한 경우
+
+```txt
+before user1: { page: '1' }
+before user2: { page: '2', checkPage: 22 }
+after instance1 User { page: '1', checkPage: '1' }
+after instance2 User { page: '2', checkPage: '2' }
+```
+
+- 테스트 결론
+
+  - `class-validator` 패키지에서 `plainToClass()` 사용하여 변환시, 입력 오브젝트에 없는 필드는 `@Transformer()`데코레이터가 동작되지 않음.
+  - 이러한 상황에서 적용하려면, `@Expose()`를 사용해야함
+
+- **원인**
+
+  - `class-validator` 확인결과, 기본적으로 입력 오브젝트에 없는 필드는 `@Transform()` 데코레이터가 동작되지 않음.
+  - 내부적으로 의도한 동작인지는 확인이 필요할 것 같음
+
+  - 원인은 변환동작시 기본적인 설정은 입력 오브젝트에 존재하는 필드들만 반환하여 각 필드에 변환을 진행함.
+
+  ```ts
+  private getKeys(target: Function, object: Record<string, any>, isMap: boolean): string[] {
+    // determine exclusion strategy
+    let strategy = defaultMetadataStorage.getStrategy(target);
+    if (strategy === 'none') strategy = this.options.strategy || 'exposeAll'; // exposeAll is default strategy
+
+
+    let keys: any[] = [];
+    if (strategy === 'exposeAll' || isMap) {
+      if (object instanceof Map) {
+        keys = Array.from(object.keys());
+      } else {
+        //입력된 오브젝트의 필드를 모두 가져옴.
+        keys = Object.keys(object);
+      }
+    }
+
+    ...
+    //... 기본적인 동작
+    if (!this.options.ignoreDecorators && target) {
+      // @Expose()가 적용된 필드를 갖고옴.
+      let exposedProperties = defaultMetadataStorage.getExposedProperties(target, this.transformationType);
+      if (this.transformationType === TransformationType.PLAIN_TO_CLASS) {
+        exposedProperties = exposedProperties.map(key => {
+          const exposeMetadata = defaultMetadataStorage.findExposeMetadata(target, key);
+          if (exposeMetadata && exposeMetadata.options && exposeMetadata.options.name) {
+            return exposeMetadata.options.name;
+          }
+
+          return key;
+        });
+      }
+      if (this.options.excludeExtraneousValues) {
+        keys = exposedProperties;
+      } else {
+        keys = keys.concat(exposedProperties);
+      }
+
+      // @Exclude()가 적용된 필드를 제외함
+      const excludedProperties = defaultMetadataStorage.getExcludedProperties(target, this.transformationType);
+      if (excludedProperties.length > 0) {
+        keys = keys.filter(key => {
+          return !excludedProperties.includes(key);
+        });
+      }
+    }
+
+    // 결론적으로 입력 오브젝트에 있는 필드와 @Expose()가 적용된 필드가 살아남음
+
+    ... 나머지 다른 옵션으로 필드 필터링...
+    }
+  ```
+
+- 참고 코드
+
+  - `plainToClass()` 실행 로직 (입력값이 객체 일때)
+    https://github.com/typestack/class-transformer/blob/develop/src/TransformOperationExecutor.ts#L31
+  - 입력 객체의 필드들 탐색 코드
+    https://github.com/typestack/class-transformer/blob/develop/src/TransformOperationExecutor.ts#L429
+
+- **해결방안**
+- 입력 객체에 없는 필드가 `@Transform()`가 적용될 때, 무조건 `@Expose()`를 사용하는 방법만이 해결방법이다.
+
+  - 자세한 사항은 원인분석 결과 참고 바란다.
+
+- 방법1 : @Expose() 사용.
+
+```ts
+import { Expose, Transform, Type } from "class-transformer";
+export class QuizContextDTO implements QuizContext {
+  ...
+
+  @Expose() // (*) Expose 데코레이터 적용
+  @Transform(({ obj }) => [obj.artist, obj.tag, obj.style].filter((v) => v))
+  @ArrayNotEmpty({
+    message: "At least one of artist, tag, or style must be provided!",
+  })
+  _atLeastOne!: object; // 내부 필드 검증용 더미 객체
+}
+```
+
+- **알게된 사실**
+
+- 공식문서,github 이슈, stack-overflow에 없는 내용은 내가 직접 소스를 확인해야한다.
+- 오픈소스를 확인하는 것이 그렇게 어렵진 않다.
+  - 코드가 어느정도 깔끔하다.
+  - 라이브러리 사용 경험과 이해도에 비례하여 코드 이해가 쉽다.
+- 오픈소스 코드를 보면서 배울수 있는게 많다.
+  - 타입스크립트 문법
+  - 프로젝트 구조
+  - 깔끔한 코드
+- `ValidationPipe()`사용시 클래스 인스턴스에 적용된 데코레이터 순서는 다음과 같다.
+
+  1. `class-transformer` 데코레이터
+  2. `class-validator` 데코레이터
+
+  ```ts
+  @Injectable()
+  export class ValidationPipe implements PipeTransform<any> {
+          public async transform(value: any, metadata: ArgumentMetadata) {
+          ...
+
+          //plainToInstance()를 호출하여 class-transformer 데코레이터가 동작된다.
+          let entity = classTransformer.plainToInstance(
+          metatype,
+          value,
+          this.transformOptions,
+          );
+
+          // 그다음 validate()를 호출하여 class-validator 데코레이터가 동작된다.
+
+          const errors = await this.validate(entity, this.validatorOptions);
+          if (errors.length > 0) {
+          throw await this.exceptionFactory(errors);
+          }
+
+          ...
+      }
+  ```
