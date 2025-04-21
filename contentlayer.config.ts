@@ -25,6 +25,7 @@ import rehypePresetMinify from 'rehype-preset-minify'
 import siteMetadata from './data/siteMetadata'
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer.js'
 import prettier from 'prettier'
+import mermaid from 'mermaid'
 
 const root = process.cwd()
 const isProduction = process.env.NODE_ENV === 'production'
@@ -44,18 +45,9 @@ const icon = fromHtmlIsomorphic(
 
 const computedFields: ComputedFields = {
   readingTime: { type: 'json', resolve: (doc) => readingTime(doc.body.raw) },
-  slug: {
-    type: 'string',
-    resolve: (doc) => doc._raw.flattenedPath.replace(/^.+?(\/)/, ''),
-  },
-  path: {
-    type: 'string',
-    resolve: (doc) => doc._raw.flattenedPath,
-  },
-  filePath: {
-    type: 'string',
-    resolve: (doc) => doc._raw.sourceFilePath,
-  },
+  slug: { type: 'string', resolve: (doc) => doc._raw.flattenedPath.replace(/^.+?(\/)/, '') },
+  path: { type: 'string', resolve: (doc) => doc._raw.flattenedPath },
+  filePath: { type: 'string', resolve: (doc) => doc._raw.sourceFilePath },
   toc: { type: 'json', resolve: (doc) => extractTocHeadings(doc.body.raw) },
 }
 
@@ -166,16 +158,14 @@ export default makeSource({
         rehypeAutolinkHeadings,
         {
           behavior: 'prepend',
-          headingProperties: {
-            className: ['content-header'],
-          },
+          headingProperties: { className: ['content-header'] },
           content: icon,
         },
       ],
       rehypeKatex,
       rehypeKatexNoTranslate,
       [rehypeCitation, { path: path.join(root, 'data') }],
-      [rehypePrismPlus, { defaultLanguage: 'js', ignoreMissing: true }],
+      [rehypePrismPlus, { defaultLanguage: 'js', ignoreMissing: true, ignore: [mermaid] }],
       rehypePresetMinify,
     ],
   },
