@@ -1,14 +1,14 @@
 {
+  "c": 2,
+  "dp": 1,
+  "implementation": 1,
   "validation": 1,
   "class-transformer": 1,
   "class-validator": 1,
   "nest-js": 2,
   "authentication": 1,
   "authorization": 1,
-  "memoir": 2,
-  "c": 2,
-  "dp": 1,
-  "implementation": 1,
+  "memoir": 3,
   "security": 3,
   "window-defender": 2,
   "browser": 1,
@@ -20,8 +20,7 @@
   "modern-js": 1,
   "network": 1,
   "tls": 1,
-  "팀노바": 1,
-  "ai-engineer": 1,
-  "쉬운코드": 2,
-  "생산성-향상": 1
+  "youtube": 1,
+  "team-nova": 1,
+  "ai-engineer": 1
 }
