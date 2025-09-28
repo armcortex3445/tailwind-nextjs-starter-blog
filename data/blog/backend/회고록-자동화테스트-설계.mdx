@@ -1,0 +1,576 @@
+---
+title: 회고록-e2e-테스트-코드-설계
+date: '2025-09-26'
+tags: ['nest-js', 'jest', 'e2e-test', 'memoir']
+draft: false
+summary: 'jest프레임워크를 사용하여 nest-js e2e 자동화 테스트 구조를 설계합니다.'
+---
+
+# TL;DR
+
+- 유지보수 측면을 고려하여 e2e 테스트 코드를 설계합니다.
+- 테스트 코드에서 테스트 DB 환경을 설정하도록 테스트 코드를 설계합니다.
+- 설계된 테스트 코드를 평가하고 검증합니다.
+
+# 본론
+
+## 문제 정의 (Problem)
+
+- 어떤 문제가 발생했는가? (객관적 사실 중심, 정량/정성 데이터 포함)
+- 문제의 영향을 받는 주체(사용자, 시스템, 비즈니스)는 누구인가?
+
+혼자서 웹 토이 프로젝트를 진행하면서 작업량이 증가하는 문제가 있었는데요. 작업량을 줄이기 위해서 작업의 자동화를 고려하게되었습니다.
+제가 가장 고려했던 작업은 테스트였습니다. 코드 수정 또는 프론트와 백엔드 통합시 정형화된 패턴을 가지고 테스트를 수행하기 때문인데요.
+정형화된 패턴을 데이터로 가공하고 동작을 정의하면, 자동화할 수 있다는 경험이 있었기 때문입니다. 또한 자동화 테스트에 대한 개념이 조금은 있었기 때문에, 자동화 테스트를 통해서 작업량을 줄이는 방법을 고려하였습니다.
+
+자동화 테스트로 대체하기 위해서는 수동 테스트의 목적을 자동화 테스트가 충족해야 했습니다.
+**수동 테스트 목적**
+
+1. 회귀 테스트
+2. Http API 계약 보장
+3. 로직 점검
+
+테스트는 프론트와 백엔드마다 종류가 여러가지 인데요.
+저는 백엔드 **e2e 테스트**에 집중하였습니다. 대부분의 수동 테스트를 e2e 테스트로 진행 하였고, e2e 테스트에 대한 개념에 익숙했기 때문입니다.
+특수한 상황을 제외하면, e2e 테스트 자동화를 통해서 수동 테스트 목적을 달성할 수 있다고 판단하였습니다.
+
+## **목표 설정 (Goal)**
+
+- 어떤 상태를 달성해야 문제가 해결되었다고 판단할 수 있는가?
+- 성공 기준(지표, 조건)을 명확히 수립.
+
+자동화 테스트를 도입한 이유가 작업량 감소를 위해였기 때문에, 테스트 코드 추가에 따른 유지보수 비용이 증가 문제를 가장 많이 고민하였습니다.
+작업량을 줄이기 위해서 도입한 테스트 코드가 작업량을 줄이지 않는다면, 긍정적인 문제 해결방안이 아니라고 판단했습니다.
+그래서 저는 유지보수성에 가장 큰 초점을 맞춰서 테스트 코드 설계하고자 하였습니다.
+
+제가 집중한 유지보수 측면은 3가지입니다.
+
+1. 가독성
+   - 미래의 나 또는 팀원이 쉽게 관리하기 위해선 테스트 코드를 쉽게 이해야할 수 있어야합니다.
+   - 코드가 이해하기 쉬울 수록, 미래의 개발자의 작업량이 줄어듭니다.
+   - 무엇을 테스트하는지, 어떤 결과가 예측되는지, 어떻게 환경을 설정하였는지 등을 코드가 보여줘야합니다.
+2. 추가/수정 용이성
+   - 프로젝트 진행시, 추가적으로 발생한 버그(결함) 테스트를 자동화하기 쉬워야합니다.
+   - 추가/수정이 쉬울 수록, 수동 테스트 비용이 줄어들고, 빠르게 자동화가 가능하므로 작업량이 줄어듭니다.
+   - 테스트 환경 설정 비용을 줄이기, 반복되는 테스트 코드 재사용하기 등을 고려할 수 있습니다.
+3. 서비스 로직과의 결합도
+   - 기능 추가 및 버그 개선으로 서비스 코드 수정시, 테스트 코드가 적게 수정되어야합니다.
+   - 테스트 코드가 적게 수정될 수록, 테스트 내부 결함이 줄어들고, 테스트 신뢰성이 유지되어 추가적인 작업이 발생하지 않습니다.
+   - 테스트 코드의 서비스 로직 의존성 줄이기 등을 고려할 수 있습니다.
+
+해당 측면을 개인적 견해를 통해서 평가하고 검증하고자 합니다.
+
+## **행동 및 실행 (Act)**
+
+- 실제로 무엇을 했는가? (객관적, 구체적 기록)
+
+### 테스트 환경 구축
+
+nestjs 프레임워크를 사용하고 있으므로, nestjs [공식 문서](https://docs.nestjs.com/fundamentals/testing)를 참조하여 환경을 구축하였습니다.
+그리고 프로젝트 개발 환경에 적합한 라이브러리를 사용하였습니다.
+
+1. 테스트 프레임 워크 : `jest`
+2. api 응답 데이터 유효성 검증 : `zod`
+3. 클라이언트 코드 : `openapi-fetch` , `openapi-typescript`, `nestjs/swagger`
+4. 테스트 데이터 : `faker`
+
+aws cloud front, s3와 같이 동작 비용이 비싸고 API 연산 결과에 영향없는 외부 서비스만 모킹을 고려하고, DB에는 직접 연결하는 테스트 환경을 지향하였는데요.
+DB는 Http API의 가장 중요한 외부 시스템이기 때문에, 수동 테스트의 목적인 회귀 테스트와 로직 점검을 보장하기 위해선 반드시 연결해야한다고 판단하였습니다.
+비용이 비싼 외부 서비스는 추후 통합 테스트 혹은 프론트 수동 테스트를 통해서 검증할 수 있다고 생각하였습니다.
+
+환경 구축의 상세 내용은 추후 다른 포스트에서 다루겠습니다.
+
+### 테스트 코드 설계
+
+저는 **테스트 코드에서 테스트 환경 설정하기**에 집중하였습니다. 외부 작업없이 테스트 코드에서 개발자가 원하는 테스트 시나리오 및 케이스 DB 환경을 설정한다면,
+**유지 보수 측면의 가독성**과 **추가/수정 용이성**을 높일 수 있다고 판단했습니다. DB 환경 설정 로직을 코드로 구현하고 추상화하면, 환경 설정을 설명할 수 있으므로 가독성이 증가합니다.추상화는 재사용성 상승과 수정 감소로 이어집니다.
+
+서비스 로직과의 결합도 측면은 e2e 테스트 특성상 만족하기 쉽다고 판단하였습니다. e2e 테스트는 http api의 body, query, path, header에 의존하고 서비스 로직을 사용하는 상황이 적기 때문입니다. 테스트 코드 구조 설계를 통해서 서비스 로직과의 결합도가 결정된다고 판단하였습니다.
+
+처음 작성한 테스트 코드 프로토타이핑의 구조는 다음과 같았습니다.
+
+```ts
+describe('AuthController (e2e)', () => {
+   //e2e test에 사용될 backend app 및 service 객체 선언
+
+  beforeAll(async () => {
+    // 테스트 전
+    // 테스트 프레임워크 환경 구축
+    // backend app 환경 구축
+  })
+
+  afterAll(async () => {
+    // 테스트 종료 후
+    // db 연결 종료, app 종료
+  })
+
+  it('<url> <Method> : <Scenario>  ', async () => {
+      //1.Arrange
+      // 테스트 환경 설정 단계. ex) db 데이터 삽입, 서비스 또는 시스템 상태 설정, dto 생성, 클라이언트 상태 설정 ...
+
+      //2.Act
+      // 테스트 수행 단계. ex) http api 요청, 서비스 로직 호출 ...
+
+      //3.Assert
+      //validate response like status,body data, body schema ... etc
+      //Or validate db Records
+      //테스트 결과 검증. ex) http 응답 데이터( 바디, 상태, 헤더, 쿠기 등) 검증, DB entity(record) 검증, 시스템 상태 검증
+  })
+```
+
+`Arrange-Act-Assert` 패턴을 참조하여 구현하였습니다.
+초기에는 before\*과 after\* 같은 `Test collection` 단계 또는 test 단계에서 테스트 환경을 설정하였습니다.
+테스트 환경 설정이 비동기 작업이므로, 비동기 작업 실행을 보장하는 hook에서 실행해야했습니다.
+
+실제 테스트 코드를 작성한 예시는 다음과 같습니다.
+
+**첫번째 테스트 코드 구조**
+
+```ts
+  	it('/auth/sign-in (POST) : 성공  ', async () => {
+      //1.Arrange
+      create user for test
+
+      //2.Act
+		const res = await client.POST(ApiPaths.AuthController_signin, {
+			params: {
+				header: {
+					authorization: testService.getBasicAuthCredential(
+						user.email,
+						user.password,
+					),
+				},
+			},
+		});
+
+      //3.Assert
+		expect(res.response.status).toBe(HttpStatus.CREATED);
+		const body = res.data;
+
+		expect(body).toBeTruthy();
+		expect(body!.user.id).toBe(userStub.id);
+
+		expectResponseBody(zSignInResponse, body);
+
+	});
+
+   it('/auth/sign-in (POST) : (실패, 유효치 않은 비밀번호)  ', async () => {
+
+      //1.Arrange
+      create user for test
+      const invalidPW = user.password + '12';
+
+      //2.Act
+      const res = await client.POST(ApiPaths.AuthController_signin, {
+			params: {
+				header: {
+					authorization: testService.getBasicAuthCredential(
+						user.email,
+                  invalidPW,
+					),
+				},
+			},
+		});
+
+      //3.Assert
+		expect(res.response.status).toBe(HttpStatus.UNAUTHORIZED);
+   })
+
+   it('/auth/sign-in (POST) : (실패, 생성되지 않은 계정)  ', async () => {
+      //1.Arrange
+      const notExistEmail = faker.internet.email();
+      const invalidPW = '12';
+
+
+      //2.Act
+      const res = await client.POST(ApiPaths.AuthController_signin, {
+			params: {
+				header: {
+					authorization: testService.getBasicAuthCredential(
+						notExistEmail,
+						invalidPW
+					),
+				},
+			},
+		});
+
+      //3.Assert
+		expect(res.response.status).toBe(HttpStatus.UNAUTHORIZED);
+   })
+})
+```
+
+초기 테스트 코드 구조는 복잡성 관리가 매우 어려운데요.
+Http API가 증가할 수록, 시나리오가 다양할 수록, 테스트 케이스가 다양할 수록, 더 많은 테스트 시나리오 추가를 위해서 코드를 추가해야합니다.
+저는 복잡성을 관리 하기 위해서 중복을 줄이는 방법을 선택하였는데요.동일한 결과가 예측되는 시나리오 또는 테스트 케이스를 그룹화하면 중복된 `Arrange`, `Act`, `Assert`를 줄일 수 있을 것이라 판단했습니다.
+
+두 번째 테스트 코드입니다.
+
+**두번째 테스트 코드 구조**
+
+```ts
+describe('AuthController (e2e)', () => {
+   //e2e test에 사용될 backend app 및 service 객체 선언
+
+  beforeAll(async () => {
+    // 테스트 전
+    // 테스트 프레임워크 환경 구축
+    // backend app 환경 구축
+  })
+
+  afterAll(async () => {
+    // 테스트 종료 후
+    // db 연결 종료, app 종료
+  })
+
+   // Http API 기준으로 테스트 그룹화
+   describe('/auth/sign-in (POST)',()=>{
+
+      // 공통 로직 정의
+      async function seedUser(){
+         create user for test
+
+         return user;
+      }
+
+      async function requestAuthSignIn( email : string, password : string){
+         const res = await client.POST(ApiPaths.AuthController_signin, {
+            params: {
+               header: {
+                  authorization: testService.getBasicAuthCredential(
+                     email,
+                     password,
+                  ),
+               },
+            },
+         });
+         return res;
+      }
+
+      it('성공 ', async () => {
+         //1.Arrange
+         const user = await seedUser();
+         const {email, password } = user;
+
+         //2.Act
+         const res = await requestAuthSignIn(email,password );
+
+         //3.Assert
+         expect(res.response.status).toBe(HttpStatus.CREATED);
+         const body = res.data;
+
+         expect(body).toBeTruthy();
+         expect(body!.user.id).toBe(userStub.id);
+
+         expectResponseBody(zSignInResponse, body);
+
+      });
+
+      it('실패, 유효치 않은 비밀번호', async () => {
+
+         //1.Arrange
+         const user = await seedUser();
+         const invalidPW = user.password + '12';
+         const { email } = user;
+
+         //2.Act
+         const res = await requestAuthSignIn(email,invalidPW);
+
+         //3.Assert
+         expect(res.response.status).toBe(HttpStatus.UNAUTHORIZED);
+      })
+
+      it('실패, 생성되지 않은 계정', async () => {
+         //1.Arrange
+         const invalidPW = '12';
+         const notExistEmail = faker.internet.email();
+
+         //2.Act
+         const res = await requestAuthSignIn(notExistEmail,invalidPW);
+
+         //3.Assert
+         expect(res.response.status).toBe(HttpStatus.UNAUTHORIZED);
+      })
+   });
+})
+```
+
+첫번째 테스트 코드 구조보다 로직의 복잡성이 줄어들었습니다. 공통 로직을 정의하여 각 테스트 시나리오에서 사용하기 때문입니다.
+그래도 여전히 시나리오가 다양할 수록, 테스트 케이스가 다양할 수록, 더 많은 테스트 시나리오 추가를 위해서 코드를 추가해야합니다.
+저는 테스트 시나리오와 테스트 케이스에 집중하여 좀 더 중복을 줄이고자 하였습니다. 제 프로젝트에서 대부분의 테스트 시나리오는 다양한 테스트 케이스에 대해서 동일한 동작 수행하고 동일한 결과를 기대합니다. 위 예시에서 `'실패, 유효치 않은 비밀번호'` 테스트와 `'실패, 생성되지 않은 계정'` 테스트는 `Arrange` 단계만 다를 뿐, 동일하게 http API를 요청하고 `HttpStatus.UNAUTHORIZED` 상태를 기대합니다. `Arrange` 단계를 제외한 각각의 `Act`와 `Assert`를 하나로 재사용 한다면, 테스트 코드 중복을 줄일 수 있습니다.
+
+세번째 테스트 구조를 작성하면 다음과 같습니다.
+`*.each()` 테스트 API를 사용하여 동일한 테스트 시나리오 동작을 여러개의 테스트 케이스에 대해서 동일하게 진행할 수 있습니다.
+
+**세 번째 테스트 코드 구조**
+
+```ts
+describe('AuthController (e2e)', () => {
+  ...
+
+   // Http API 기준으로 테스트 그룹화
+   describe('/auth/sign-in (POST)',()=>{
+
+      let user : User
+
+      //Test Collection 단계 이후에 실행됨
+      beforeAll(async()=>{
+         user = await seedUser();
+      });
+      ....
+
+      //test case
+      it.each([
+         {testName : '유효치 않은 비밀번호' ,email : user.email, password : user.password},
+         //실제로는 user === undefined
+         {testName : '유효치 않은 비밀번호' ,email : undefined.email, password : undefined.password}, // (1) undefined 참조 에러 발생
+         //
+         {testName : '생성되지 않은 계정' ,email : faker.internet.email(), password : '12'},
+
+      ])('실패, UNAUTHORIZED 상태 응답 수신 : $testName', async ({email, password }) => {
+
+         //2.Act
+         const res = await requestAuthSignIn(email,password);
+
+         //3.Assert
+         expect(res.response.status).toBe(HttpStatus.UNAUTHORIZED);
+      })
+
+   });
+})
+```
+
+`'실패, 유효치 않은 비밀번호'` 테스트 케이스의 전제는 **User Entity(Record)가 DB에 존재해야한 다는 사실**인데요.
+테스트가 실행되기 전에 user entity(record)가 삽입되는 `Arrange` 단계가 필요하고, DB에 삽입된 user entity(record)의 객체를 `.each()` API에 전달해야합니다.
+하지만, 위 방법으로는 테스트 코드 내에서 user entity(record)를 전달할 수 없습니다.
+
+여기서 잠시 Jest 프레임워크 실행 순서에 대해서 알아보겠습니다.[참조](https://jestjs.io/docs/setup-teardown?utm_source=chatgpt.com)
+Jest 프레임워크에서 `*.each()` API에 전달된 배열은 `Test collection` 단계에서 정의되어야 합니다.
+Jest 프레임워크는 `Test collection`에서 describe에 전달된 콜백함수를 실행하며 before\* , after\*, nested describe와 describe.each 그리고 test와 test.each 등의 hook 정보를 수집합니다. 이때 test.each와 describe.each로부터 여러개의 test 그리고 describe가 생성됩니다. 그 이후에 순서에 맞게 hook을 실행합니다.  
+describe에 전달된 콜백함수가 실행되기 전 또는 그 시점에 `*.each` API에 전달된 배열의 값들이 결정되어야만, 테스트 케이스를 정확히 실행할 수 있습니다.
+
+저는 `lazy seed` 방법을 사용하여 문제를 해결했습니다. DB에 삽입될 Entity(Record) Stub을 미리 정의하여 `*.each()` API에 전달한 후, before\* , after\* 또는 test hook에서 Stub을 삽입하는 방법입니다.
+이 방식은 제가 집중했던 **테스트 코드에서 테스트 환경 설정**을 보장합니다.
+테스트 케이스로 넘겨야할 데이터가 entity의 기본키 또는 외래키 등을 포함한다면, 사전에 Stub 인스턴스를 만들어서 전달하여 우추 DB에 삽입될 데이터를 미리 참조하는 테스트를 구현할 수 있습니다.
+
+네번째 테스트 코드는 다음과 같습니다.
+
+**네 번째 테스트 코드 구조**
+
+```ts
+describe('AuthController (e2e)', () => {
+  ...
+
+   // Http API 기준으로 테스트 그룹화
+   describe('/auth/sign-in (POST)',()=>{
+
+      describe('실패, UNAUTHORIZED 상태 응답 수신' , ()=>{
+
+         //
+         const userStub = factoryUserStub();
+         const deletedUserStub = factoryUserStub();
+
+         beforeAll(async () =>{
+            //1. Arrange-1 : 유저 생성
+
+            await testService.insertUser(userStub);
+
+            //1. Arrange-2 : 유저 삭제
+            const user = await testService.insertUser(userStub);
+            await userService.delete(user);
+         });
+
+         it.each([
+            {testName : '유효치 않은 비밀번호' ,email : userStub.email, password : userStub.password},
+            {testName : '생성되지 않은 계정' ,email : faker.internet.email(), password : '12'},
+            {testName : '삭제된 계정' ,email : deletedUserStub.email, password : deletedUserStub.password}, // 새로운 테스트 케이스 추가
+
+         ])('test: $testName', async ({email, password }) => {
+
+            //2.Act
+            const res = await requestAuthSignIn(email,password);
+
+            //3.Assert
+            expect(res.response.status).toBe(HttpStatus.UNAUTHORIZED);
+         })
+      });
+
+   });
+})
+```
+
+DB에 삽입되지 않은 데이터를 테스트 실행전에 참조할 수 있습니다. 별도의 `Arrange`를 추가하면, 새로운 테스트 케이스를 삽입할 수 도 있습니다.
+`stub` 인스턴스 변수 이름을 활용하여 데이터에 대해 설명할 수 있습니다. `stub`를 먼저 선언하고, 데이터 DB 삽입을 나중에하는 해당 방식은 테스트 코드에서 유연하게 테스트 DB 환경을 설정하게 합니다.
+테스트 코드 외부에서 테스트 DB 환경을 설정할 필요가 없다는 사실이 해당 방법의 가장 큰 장점이라고 판단하였습니다.
+
+## **검증 (Validation)**
+
+- 문제 해결 여부를 어떻게 검증했는가?
+- 객관적 검증 지표, 실험, 사용자 피드백 포함.
+
+고안한 테스트 구조를 적용하며 e2e 테스트를 구현하고 디버깅하면서, 유지보수 측면 검증을 진행하였습니다.
+복잡성을 감소시켜 유지보수 측면을 높이고자 하였지만, 새로운 문제들이 있었습니다.
+
+저는 새로운 문제들을 전부다 개선하지 못했지만, 일부는 코딩스타일을 통해 개선하고자 하였습니다.
+
+1. 가독성
+
+   - `describe` 콜백 함수가 깊게 중첩되어 코드가 복잡해지는 문제가 있습니다.
+     - 개선 방법:
+       - e2e 테스트 코드 구조가 일관성을 갖게한다.
+       - 공유되는 변수와 함수 정의는 콜백 함수 상단에 정의한다.
+       - 공유되는 변수 이름은 역할을 충분히 설명한다.
+         - 예시: `stub` 인스턴스 변수는 `stub`를 사용. `received`와 `expected` 접두사를 사용하여 검증될 변수와 검증 결과 변수를 구분한다.
+   - 복수의 `Arrange`가 동일한 before\* 훅에서 실행되어, before\* 훅의 복잡도가 증가합니다.
+     - 개선 방법 :
+       - 동작이 복잡한 코드는 함수로 정의하여 동작을 설명하며, 하나의 동작만을 수행한다.
+   - 복수의 `Assert`가 동일한 test 훅에서 실행되어 복잡도가 증가하고, `Assert`의 동작을 설명해주는 함수 이름을 작성하기 어렵습니다.
+     - 개선 방법 :
+       - test 훅의 testName 인자를 사용하여 각각의 Assert를 설명하고, test가 하나의 검증만을 수행하도록 `Assert` 단계를 세분화합니다.
+       - 세부 동작이 함수로 설명 될 수 있으면 함수로 정의합니다.
+
+2. 추가/수정 용이성
+
+   - 복수의 테스트 케이스에서 공유되는 인스턴스 변수와 DB 상태는 테스트 시나리오 수정에 복잡성을 줍니다.
+     - 개선 방법 :
+       - 테스트 시나리오에서 변경이 가능한 공유 변수는 `target` 등을 사용하여 구분합니다.
+         - `assert()` API 등을 사용하여 객체가 변경되지 않아야함을 코드로 명시합니다.
+       - DB 상태 변경은 `Arrange` 단계를 수행하는 before\* 훅에서만 진행하며, DB 상태 변경 동작을 설명하는 함수를 사용한다.
+       - `Act` 단계에서는 테스트 동작만 진행하고, `Assert` 단계에서는 DB 상태 변경과 공유 변수 변경을 지양한다.
+
+3. 서비스 로직과의 결합도
+
+   - DB Table에 의존하는 Stub 클래스가 생성됩니다.
+     - 개선 불필요
+       - DB 구조는 서비스 로직보다 변경이 적으므로, 결합도가 높지만 개선할 필요성이 낮습니다.
+   - 서비스 로직에서 생성되는 데이터(jwt, hash, ...etc)는 테스트 케이스 데이터로 전달할 수 없고, `Arrange` 단계에서 서비스 로직에 의존해야합니다.
+     - 개선 어려움
+       - 서비스 로직과의 결합도를 줄일 방법을 모색할 순 있지만, 데이터의 특성상 결합도를 없앨 수 없습니다.
+
+### **결과 (Outcome)**
+
+- 어떤 결과가 나왔는가? (정량/정성 데이터로 표현)
+- 목표와 얼마나 일치했는가?
+
+검증 과정을 거처 개선하여 결정한 최종 e2e 테스트 코드 구조는 다음과 같습니다.
+
+**최종 테스트 코드 구조**
+
+```ts
+describe('<e2e test description >', () => {
+  ...
+
+   // Http API 기준으로 테스트 그룹화
+   describe('<url> <METHOD>',()=>{
+
+      //Arrange, Act, Assert에서 사용할 로직 정의.
+      async function setTestScenario(){}
+
+      async function requestHttpApi(){}
+
+      async function readEntity(){}
+      async function expectResponseBody(){}
+
+      // 테스트 시나리오 기준으로 테스트 케이스 그룹화
+      describe('<test scenario description>' , ()=>{
+         // test case로 전달한 데이터 정의
+         const dataStub1 = factoryDataStub();
+         const dataStub2 = factoryDataStub();
+
+         // 또는 해당 시나리오의 Arrange, Act, Assert에서 사용할 변수, 함수 정의
+         async function setTestCase1(){}
+         async function setTestCase2(){}
+
+         async function expectServiceStatus(){};
+
+         //test 환경 설정
+         beforeAll(async () =>{
+            //1. Arrange-1 : 테스트 케이스 1을 위한 환경 동작
+            await setTestCase1(dataStub1);
+
+            //1. Arrange-2 : 테스트 케이스 2을 위한 환경 조성
+            await setTestCase2(dataStub2);
+
+         });
+
+         describe.each([
+            {testName : '테스트 케이스 1' , data : dataStub1},
+            {testName : '테스트 케이스 2' , data : dataStub2},
+
+         ])('test: $testName', async ({data }) => {
+            //Assert에서 사용할 공유 변수만 정의
+            let receivedRes : Awaited<ReturnType<typeof requestAuthSignIn>>;
+
+            beforeAll(async ()=>{
+               //2.Act
+               receivedRes = await requestHttpApi(email,password);
+            });
+
+            it("response should match openapi spec",async ()=>{
+               //3.Assert-1
+               const receivedStatus = received.status;
+               const expectedStatus = 200;
+
+               expect(receivedStatus).toBe(expectedStatus);
+               const receivedBody = receivedRes.body;
+               await expectResponseBody(receivedBody);
+            });
+
+            it("db entities should not changed",async ()=>{
+               //3.Assert-2
+
+               const receivedEntity = await readEntity(data);
+               const expectedEntity = null;
+               expect(receivedEntity).toBe(expectedEntity);
+
+            });
+
+            it("service status should updated",async ()=>{
+               //3.Assert-3
+               await expectServiceStatus();
+
+            });
+         })
+      });
+
+   });
+})
+```
+
+검증 단계에서 고려한 코딩 스타일을 반영한 결과, hook이 많아지고 변수와 함수의 유효 스코프가 일관되지 않아서 복잡도가 발생하였습니다.
+
+hook의 증가는 코딩 스타일과 일관성을 통해서 복잡성을 완화할 수 있다고 판단하여 충분히 감수할 수 있는 리스크라고 생각하였습니다.
+before\* 훅에서는 `Arrange` 단계만 수행하기, test 훅에서는 `Assert`만 수행하기 등의 코딩스타일을 적용하기 등을 고려하고 있습니다.
+
+함수의 유효 스코프 비일관성은 함수 정의를 `*.(ts,js)` 모듈로 이동시켜서 해소할 수 있다고 판단하였습니다.
+변수의 유효 스코프 일관성은 당장 해소하지 않기로 하였습니다. 현재 코딩 스타일로 변수 이름을 통해서 유효 스코프를 특정할 수 있다고 판단하였습니다.
+
+## **인사이트 및 학습 (Insights & Lessons)**
+
+- 이번 과정에서 배운 점은 무엇인가?
+- 어떤 원인이 문제를 일으켰고, 어떻게 예방할 수 있는가?
+
+### 목표 설정의 중요성
+
+제 개인적 기준으로 다음 세가지 유지보수 측면을 만족하는 테스트 코드 구조를 작성하였는데요.
+
+1. 회귀 테스트
+2. Http API 계약 보장
+3. 로직 점검
+
+테스트 코드 설계를 위해서 많은 작업을 하였지만, 가장 중요했던 것은 **목표 설정**과정이었습니다.
+저는 유지 보수 측면을 가장 중요시했기 때문에, 알맞은 구조를 설계하기 위해서 제가 모르는 것과 알아야하는 것, 고려하지 않아도 되는 것 등을 인지할 수 있었습니다.
+`lazy seed`는 간단한 아이디어였지만, 처음에는 생각하지 못했습니다. 목표 설정에 부합하기 위해서 고민하고 방향을 결정한 덕분에 탐색하고 떠올릴 수 있었습니다.
+
+### 검증의 중요성
+
+최종적으로 고안한 테스트 코드를 검증하긴 했지만, 시간이 지난 후 다시 검증해야한다고 생각됩니다.
+실효성이 떨어지는 부분이 있을 수도 있기 때문에, 미래의 본인 또는 다른 사람이 사용해보는 단계가 반드시 필요하다고 생각됩니다.
+
+## **향후 계획 (Next Step)**
+
+- 같은 문제가 재발하지 않도록 어떤 개선/예방 조치를 취할 것인가?
+- 추가로 탐색하거나 실험할 부분은 무엇인가?
+
+테스트 코드 설계 및 구현에 대해서 다른 글을 포스팅할 예정입니다.
+또한 동시에 테스트 코드를 개선점을 살펴보고, 개선해볼 예정입니다.
